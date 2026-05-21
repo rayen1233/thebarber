@@ -133,6 +133,53 @@ async function fetchStorePublic() {
   return data;
 }
 
+/**
+ * @param {Record<string, unknown>} payload
+ * @returns {Promise<string>}
+ */
+async function encodeStoreBody(payload) {
+  const json = JSON.stringify(payload);
+  if (json.length < MAX_BODY_BYTES || typeof CompressionStream === "undefined") {
+    return json;
+  }
+  const compressed = await new Response(
+    new Blob([json]).stream().pipeThrough(new CompressionStream("gzip")),
+  ).arrayBuffer();
+  const bytes = new Uint8Array(compressed);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  const wrapped = { storeGzipBase64: btoa(binary) };
+  if (payload.merge || payload.deletedProductIds?.length) wrapped.merge = true;
+  return JSON.stringify(wrapped);
+}
+
+/** @param {Record<string, unknown>} payload */
+async function storeMergePut(payload) {
+  const key = getAdminKey();
+  const url = isRemoteMode() ? "/api/store" : `${getRemoteApiBase()}/api/store`;
+  const res = await fetch(url, {
+    method: "PUT",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "X-Admin-Key": key,
+      "Content-Type": "application/json",
+    },
+    body: await encodeStoreBody(payload),
+  });
+  const text = await res.text();
+  let data = {};
+  if (text.trim()) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`Réponse store non-JSON (${res.status})`);
+    }
+  }
+  if (!res.ok) throw new Error(data.error || `Sync store (${res.status})`);
+  return data;
+}
+
 /** DELETE via /api/store (secours si /api/admin-catalog absent). */
 async function deleteViaStoreApi(id) {
   const key = getAdminKey();
