@@ -25,7 +25,7 @@ import {
   CLIENT_UPLOAD_THRESHOLD_BYTES,
 } from "./lib/media-limits.js";
 import { catalogUrlFromBlobUpload } from "./lib/blob-media-url.mjs";
-import { loadBlobClientUpload } from "./lib/blob-client-upload.js";
+import { loadBlobClientPut } from "./lib/blob-client-upload.js";
 
 const ADMIN_KEY_SESSION = "thebarber_admin_key_v1";
 const REMOTE_API_BASE_SESSION = "thebarber_remote_api_base_v1";
@@ -762,6 +762,37 @@ function mediaPathnameForUpload(filename, blob, fallbackId = "") {
  * @param {string} filename
  * @param {{ baseUrl?: string, adminKey?: string, contentType?: string, onProgress?: (p: { percentage: number }) => void }} [opts]
  */
+const MAX_SERVER_VIDEO_PROXY_BYTES = 4_200_000;
+
+/**
+ * Upload vidéo via POST binaire sur notre API (évite CORS vercel.com).
+ * @param {Blob | File} blob
+ * @param {string} pathname
+ * @param {{ baseUrl?: string, adminKey?: string, contentType?: string }} opts
+ */
+async function uploadVideoViaServerProxy(blob, pathname, opts = {}) {
+  const baseUrl = remoteApiBaseForUpload(opts);
+  const key = opts.adminKey || getAdminKey();
+  const res = await fetch(
+    `${baseUrl}/api/upload-video?pathname=${encodeURIComponent(pathname)}`,
+    {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "X-Admin-Key": key,
+        "Content-Type": opts.contentType || blob.type || "video/mp4",
+      },
+      body: blob,
+    },
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || `Upload serveur refusé (${res.status})`);
+  }
+  return String(data.url || "");
+}
+
 async function uploadMediaBlobViaClient(blob, filename, opts = {}) {
   const baseUrl = remoteApiBaseForUpload(opts);
   const key = opts.adminKey || getAdminKey();
@@ -774,15 +805,50 @@ async function uploadMediaBlobViaClient(blob, filename, opts = {}) {
     );
   }
 
-  const upload = await loadBlobClientUpload();
   const pathname = mediaPathnameForUpload(filename, blob);
-  const headers = {
+
+  if (blob.size <= MAX_SERVER_VIDEO_PROXY_BYTES) {
+    try {
+      const url = await uploadVideoViaServerProxy(blob, pathname, {
+        ...opts,
+        contentType: opts.contentType || blob.type || "video/mp4",
+      });
+      if (url) return url;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!/too lourd|413|4 Mo|payload/i.test(msg)) throw err;
+      console.warn("[thebarber] proxy vidéo serveur échoué, essai upload direct", msg);
+    }
+  }
+
+  const put = await loadBlobClientPut();
+  const authHeaders = {
     Authorization: `Bearer ${key}`,
     "X-Admin-Key": key,
+    "Content-Type": "application/json",
   };
-  const baseOpts = {
-    handleUploadUrl: `${baseUrl}/api/upload-client`,
-    headers,
+
+  async function fetchClientToken(access) {
+    const res = await fetch(`${baseUrl}/api/upload-token`, {
+      method: "POST",
+      cache: "no-store",
+      headers: authHeaders,
+      body: JSON.stringify({
+        pathname,
+        access,
+        contentType: opts.contentType || blob.type || "application/octet-stream",
+        size: blob.size,
+        multipart: blob.size > 4_500_000,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || `Jeton upload refusé (${res.status})`);
+    }
+    return data;
+  }
+
+  const putOpts = {
     contentType: opts.contentType || blob.type || "application/octet-stream",
     multipart: blob.size > 4_500_000,
     onUploadProgress: opts.onProgress,
@@ -791,12 +857,23 @@ async function uploadMediaBlobViaClient(blob, filename, opts = {}) {
   let result;
   let access = "public";
   try {
-    result = await upload(pathname, blob, { ...baseOpts, access: "public" });
+    const tokenData = await fetchClientToken("public");
+    access = tokenData.access === "private" ? "private" : "public";
+    result = await put(pathname, blob, {
+      ...putOpts,
+      access,
+      token: String(tokenData.clientToken || ""),
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (!/access|forbidden|private|BlobAccess/i.test(msg)) throw err;
-    result = await upload(pathname, blob, { ...baseOpts, access: "private" });
+    const tokenData = await fetchClientToken("private");
     access = "private";
+    result = await put(pathname, blob, {
+      ...putOpts,
+      access: "private",
+      token: String(tokenData.clientToken || ""),
+    });
   }
 
   const catalogUrl = catalogUrlFromBlobUpload(
