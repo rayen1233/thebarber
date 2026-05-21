@@ -28,6 +28,7 @@ import {
   parseCatalogImportJson,
   migrateIdbVideosToRemote,
   fetchRemoteStoreMeta,
+  pushProductToRemote,
 } from "./shop-remote.js";
 import { setProductsMemoryCache } from "./shop-core.js";
 
@@ -49,6 +50,10 @@ function readFileAsDataUrl(file) {
 }
 
 const MAX_VIDEO_BYTES = 6_000_000;
+
+/** @type {Map<string, string>} */
+const photoRowDataCache = new Map();
+let photoRowSeq = 0;
 
 /**
  * @param {ImageBitmap} bitmap
@@ -169,10 +174,11 @@ async function recompressDataUrlToTarget(dataUrl, maxBytes) {
 async function recompressAllPhotoRowsInForm(container, maxBytesPerImage) {
   const rows = container.querySelectorAll(".admin-photo-row");
   for (const row of rows) {
-    const stored = (row.getAttribute("data-stored-url") || "").trim();
+    const rowId = row.dataset.photoRowId || "";
+    const stored = (rowId && photoRowDataCache.get(rowId)) || "";
     if (!stored.startsWith("data:image")) continue;
     const next = await recompressDataUrlToTarget(stored, maxBytesPerImage);
-    row.setAttribute("data-stored-url", next);
+    if (rowId) photoRowDataCache.set(rowId, next);
     const preview = row.querySelector(".admin-photo-preview");
     const prevImg = preview?.querySelector("img");
     if (prevImg) prevImg.src = next;
@@ -210,7 +216,9 @@ async function loadFileIntoRow(row, file) {
     else if (text) status.classList.add("is-ok");
   };
 
-  row.removeAttribute("data-stored-url");
+  const rowId = row.dataset.photoRowId || `ph-${++photoRowSeq}`;
+  row.dataset.photoRowId = rowId;
+  photoRowDataCache.delete(rowId);
   setStatus("Traitement de l’image…", false);
 
   const isImage =
@@ -224,7 +232,9 @@ async function loadFileIntoRow(row, file) {
 
   try {
     const dataUrl = await compressImageToJpegDataUrl(file);
-    row.setAttribute("data-stored-url", dataUrl);
+    const rowId = row.dataset.photoRowId || `ph-${++photoRowSeq}`;
+    row.dataset.photoRowId = rowId;
+    photoRowDataCache.set(rowId, dataUrl);
     if (urlInp) urlInp.value = "";
     if (preview) {
       preview.textContent = "";
@@ -250,20 +260,24 @@ async function loadFileIntoRow(row, file) {
 function addPhotoRow(container, initialUrl = "") {
   const row = document.createElement("div");
   row.className = "admin-photo-row";
-  if (initialUrl.startsWith("data:image")) {
-    row.setAttribute("data-stored-url", initialUrl);
+  const rowId = `ph-${++photoRowSeq}`;
+  row.dataset.photoRowId = rowId;
+
+  const url = String(initialUrl || "").trim();
+  if (url.startsWith("data:image")) {
+    photoRowDataCache.set(rowId, url);
   }
 
   const preview = document.createElement("div");
   preview.className = "admin-photo-preview";
   if (
-    initialUrl.startsWith("data:image") ||
-    initialUrl.startsWith("http") ||
-    initialUrl.startsWith("/") ||
-    initialUrl.startsWith("public/")
+    url.startsWith("data:image") ||
+    url.startsWith("http") ||
+    url.startsWith("/") ||
+    url.startsWith("public/")
   ) {
     const img = document.createElement("img");
-    img.src = resolveShopMediaUrl(initialUrl) || initialUrl;
+    img.src = resolveShopMediaUrl(url) || url;
     img.alt = "";
     img.referrerPolicy = "no-referrer";
     img.onerror = () => {
@@ -282,12 +296,12 @@ function addPhotoRow(container, initialUrl = "") {
   urlInp.rows = 2;
   urlInp.placeholder =
     "URL (https://…) ou chemin relatif (ex. public/mon-produit.jpg). Laisser vide si vous utilisez le fichier ci-dessous.";
-  if (initialUrl && !initialUrl.startsWith("data:image")) {
-    urlInp.value = initialUrl;
+  if (url && !url.startsWith("data:image")) {
+    urlInp.value = url;
   }
 
   urlInp.addEventListener("input", () => {
-    row.removeAttribute("data-stored-url");
+    photoRowDataCache.delete(rowId);
     const st = row.querySelector(".admin-photo-status");
     if (st) {
       st.textContent = "";
@@ -315,13 +329,17 @@ function addPhotoRow(container, initialUrl = "") {
   removeBtn.style.cssText = "min-height:36px;padding:0 0.75rem;font-size:0.65rem;";
   removeBtn.textContent = "Retirer la ligne";
   removeBtn.addEventListener("click", () => {
+    photoRowDataCache.delete(rowId);
     row.remove();
   });
 
   const status = document.createElement("div");
   status.className = "admin-photo-status";
-  if (initialUrl.startsWith("data:image")) {
-    status.textContent = "Image importée (données locales)";
+  if (url.startsWith("data:image")) {
+    status.textContent = "Image en mémoire — « Retirer » ou choisir un fichier pour remplacer";
+    status.classList.add("is-ok");
+  } else if (url.startsWith("http")) {
+    status.textContent = "Image en ligne (URL Blob)";
     status.classList.add("is-ok");
   }
 
@@ -340,10 +358,11 @@ function addPhotoRow(container, initialUrl = "") {
 function collectPhotos(container) {
   const urls = [];
   container.querySelectorAll(".admin-photo-row").forEach((row) => {
-    const stored = (row.getAttribute("data-stored-url") || "").trim();
+    const rowId = row.dataset.photoRowId || "";
+    const cached = rowId ? photoRowDataCache.get(rowId) || "" : "";
     const inp = row.querySelector(".admin-photo-url");
     const typed = inp instanceof HTMLTextAreaElement ? inp.value.trim() : "";
-    const v = stored || typed;
+    const v = cached || typed;
     if (v) urls.push(resolveShopMediaUrl(v) || v);
   });
   return urls;
@@ -384,8 +403,11 @@ async function loadProductIntoForm(p) {
   if (vf instanceof HTMLInputElement) vf.value = "";
   if (ve instanceof HTMLInputElement) {
     if (isIdbVideoRef(p.videoUrl)) {
-      ve.value = p.videoUrl;
-      setAdminStatus("Vidéo en stockage local (navigateur). Réimportez un fichier pour la remplacer.");
+      ve.value = "";
+      setAdminStatus(
+        "Vidéo non publiée en ligne (stockage local). Choisissez un fichier vidéo ci-dessous puis enregistrez.",
+        "error",
+      );
     } else {
       ve.value = p.videoUrl || "";
     }
@@ -394,9 +416,10 @@ async function loadProductIntoForm(p) {
   const ph = document.getElementById("admin-photos");
   if (ph) {
     ph.innerHTML = "";
-    const urls = Array.isArray(p.photos) && p.photos.length ? p.photos : ["", "", ""];
+    photoRowDataCache.clear();
+    const urls = Array.isArray(p.photos) && p.photos.length ? p.photos : [""];
     urls.forEach((url) => addPhotoRow(ph, url));
-    while (ph.querySelectorAll(".admin-photo-row").length < 3) addPhotoRow(ph);
+    if (ph.querySelectorAll(".admin-photo-row").length < 1) addPhotoRow(ph);
   }
 
   form.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -458,6 +481,7 @@ function resetForm() {
   const ph = document.getElementById("admin-photos");
   if (ph) {
     ph.innerHTML = "";
+    photoRowDataCache.clear();
     addPhotoRow(ph);
     addPhotoRow(ph);
     addPhotoRow(ph);
@@ -575,12 +599,27 @@ function main() {
       return;
     }
 
-    const tryUpsert = () => {
-      upsertProduct(v.product);
+    const finishSave = async (product) => {
+      if (isRemoteMode() && getAdminKey()) {
+        setAdminStatus("Publication sur Vercel…");
+        await pushProductToRemote(product, { onProgress: (msg) => setAdminStatus(msg) });
+      } else {
+        upsertProduct(product, { skipRemoteSync: isRemoteMode() });
+      }
+      renderTable();
+      resetForm();
+      setAdminStatus("Produit enregistré et publié sur le site.");
     };
 
     try {
-      tryUpsert();
+      if (isRemoteMode() && getAdminKey()) {
+        await finishSave(v.product);
+        return;
+      }
+      upsertProduct(v.product, { skipRemoteSync: false });
+      renderTable();
+      resetForm();
+      setAdminStatus("Produit enregistré avec succès.");
     } catch (err) {
       if (!isQuotaError(err) || !phContainer) {
         const msg =
@@ -598,7 +637,14 @@ function main() {
         if (!v.ok) {
           throw err;
         }
-        tryUpsert();
+        upsertProduct(v.product, { skipRemoteSync: isRemoteMode() });
+        if (isRemoteMode() && getAdminKey()) {
+          await pushProductToRemote(v.product, { onProgress: (msg) => setAdminStatus(msg) });
+        }
+        renderTable();
+        resetForm();
+        setAdminStatus("Produit enregistré (photos recompressées).");
+        return;
       } catch (err2) {
         if (isQuotaError(err2) && partial.videoUrl) {
           try {
@@ -607,13 +653,16 @@ function main() {
             partial = { ...partial, videoUrl: ref };
             const vVid = validateProductInput(partial);
             if (vVid.ok) {
-              upsertProduct(vVid.product);
+              upsertProduct(vVid.product, { skipRemoteSync: isRemoteMode() });
+              if (isRemoteMode() && getAdminKey()) {
+                await pushProductToRemote(vVid.product);
+              }
               renderTable();
               resetForm();
               setAdminStatus(
-                ref
-                  ? "Produit enregistré. La vidéo est stockée dans le navigateur (IndexedDB), pas dans le quota catalogue."
-                  : "Produit enregistré sans vidéo.",
+                isIdbVideoRef(ref)
+                  ? "Produit enregistré localement. Uploadez la vidéo sur Vercel via le champ fichier."
+                  : "Produit enregistré.",
               );
               return;
             }
@@ -905,6 +954,8 @@ async function ensureAdminRemoteKey() {
 async function bootAdmin() {
   await whenStoreReady();
   await ensureAdminRemoteKey();
+  const videoHint = document.getElementById("admin-video-hint");
+  if (videoHint && isRemoteMode()) videoHint.style.display = "block";
   main();
   void initRemoteSyncBanner();
   initAdminDashboard();

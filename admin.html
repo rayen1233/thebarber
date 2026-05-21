@@ -85,9 +85,17 @@
                 />
                 <input type="file" id="admin-video-file" accept="video/*" style="margin-top: 0.5rem" />
 
-                <label>Photos (minimum 3)</label>
+                <label>Photos (minimum 1)</label>
                 <p style="margin: 0 0 0.5rem; font-size: 0.78rem; color: var(--shop-muted); line-height: 1.45">
-                  Importez des fichiers (conversion automatique) ou indiquez une adresse / un chemin d’image pour chaque ligne.
+                  Utilisez « Retirer la ligne » pour supprimer une photo. Sur Vercel, choisissez un fichier image pour
+                  chaque ligne — les fichiers sont envoyés vers Blob à l’enregistrement.
+                </p>
+                <p
+                  id="admin-video-hint"
+                  style="margin: 0 0 0.75rem; font-size: 0.78rem; color: #d8a090; line-height: 1.45; display: none"
+                >
+                  Vidéos non transférées automatiquement : choisissez un <strong>fichier vidéo</strong> ci-dessous pour
+                  chaque produit, puis enregistrez.
                 </p>
                 <div class="admin-row-actions" style="margin-bottom: 0.75rem">
                   <button type="button" class="shop-btn-ghost" id="admin-photos-bulk-btn">Importer plusieurs images</button>
@@ -199,7 +207,7 @@
       </main>
     </div>
     <script type="module" src="./barber-theme.js"></script>
-    <script type="module" src="./shop-bootstrap.js?v=20260524-batch"></script>
-    <script type="module" src="./admin.js?v=20260524-batch"></script>
+    <script type="module" src="./shop-bootstrap.js?v=20260524-media"></script>
+    <script type="module" src="./admin.js?v=20260524-media"></script>
   </body>
 </html>

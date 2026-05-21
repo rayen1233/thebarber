@@ -144,10 +144,20 @@ export function getProducts() {
   return mapProductsForDisplay(list);
 }
 
-/** @param {Product[]} list */
-export function saveProducts(list) {
+/**
+ * @param {Product[]} list
+ * @param {{ skipRemoteSync?: boolean }} [opts]
+ */
+export function saveProducts(list, opts = {}) {
   const json = JSON.stringify(list);
   const useMemoryOnly = json.length > 1_800_000;
+  const sync = () => {
+    if (!opts.skipRemoteSync) {
+      import("./shop-remote.js")
+        .then((m) => m.scheduleRemoteSync?.())
+        .catch(() => {});
+    }
+  };
   try {
     if (useMemoryOnly) {
       productsMemoryCache = list;
@@ -161,18 +171,14 @@ export function saveProducts(list) {
       productsMemoryCache = null;
     }
     window.dispatchEvent(new CustomEvent("thebarber:products-updated"));
-    import("./shop-remote.js")
-      .then((m) => m.scheduleRemoteSync?.())
-      .catch(() => {});
+    sync();
   } catch (e) {
     const name = e && /** @type {Error} */ (e).name;
     const code = e && /** @type {DOMException} */ (e).code;
     if (name === "QuotaExceededError" || code === 22) {
       productsMemoryCache = list;
       window.dispatchEvent(new CustomEvent("thebarber:products-updated"));
-      import("./shop-remote.js")
-        .then((m) => m.scheduleRemoteSync?.())
-        .catch(() => {});
+      sync();
       return;
     }
     throw e;
@@ -208,8 +214,8 @@ export function validateProductInput(partial) {
   if (!Number.isFinite(priceTnd) || priceTnd < 0) {
     return { ok: false, error: "Prix TND invalide." };
   }
-  if (photos.length < 3) {
-    return { ok: false, error: "Au moins 3 photos sont requises." };
+  if (photos.length < 1) {
+    return { ok: false, error: "Au moins 1 photo requise." };
   }
   const product = {
     id: partial.id && String(partial.id).trim() ? String(partial.id) : newProductId(),
@@ -227,13 +233,16 @@ export function validateProductInput(partial) {
   return { ok: true, product };
 }
 
-/** @param {Product} product */
-export function upsertProduct(product) {
+/**
+ * @param {Product} product
+ * @param {{ skipRemoteSync?: boolean }} [opts]
+ */
+export function upsertProduct(product, opts = {}) {
   const list = getProducts();
   const i = list.findIndex((p) => p.id === product.id);
   if (i >= 0) list[i] = product;
   else list.push(product);
-  saveProducts(list);
+  saveProducts(list, opts);
   return product;
 }
 

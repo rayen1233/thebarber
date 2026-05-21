@@ -558,10 +558,78 @@ export async function patchRemoteUsersOrders() {
 /** Fire-and-forget sync after local mutations on Vercel. */
 export function scheduleRemoteSync() {
   if (!isRemoteMode()) return;
+  const payload = readLocalStorePayload();
+  const size = JSON.stringify(payload.products).length;
   const run = getAdminKey()
-    ? () => pushRemoteStore()
+    ? () => {
+        if (size > 2_000_000) {
+          console.warn(
+            "[thebarber] sync catalogue complet ignoré (trop lourd) — enregistrez produit par produit dans l’admin.",
+          );
+          return Promise.resolve({ ok: true });
+        }
+        return pushRemoteStore();
+      }
     : () => patchRemoteUsersOrders();
   void run().catch((err) => {
     console.warn("[thebarber] remote sync failed", err);
   });
+}
+
+/**
+ * Publie un seul produit sur le serveur (évite 413).
+ * @param {import("./shop-core.js").Product} product
+ * @param {{ onProgress?: (msg: string) => void }} [opts]
+ */
+export async function pushProductToRemote(product, opts = {}) {
+  if (!isRemoteMode()) return { ok: true };
+  const key = getAdminKey();
+  if (!key) {
+    return { ok: false, error: "Clé admin requise." };
+  }
+
+  const { saveProducts, getProducts } = await import("./shop-core.js");
+  const { dataUrlToBlob, isIdbVideoRef } = await import("./shop-media-store.js");
+
+  let prepared = { ...product };
+  const photos = Array.isArray(product.photos) ? product.photos : [];
+  if (photos.some((u) => String(u).startsWith("data:"))) {
+    opts.onProgress?.("Envoi des images vers Blob…");
+    const uploaded = await uploadInlinePhotosInProducts(
+      [product],
+      (blob, name) => uploadMediaBlob(blob, name),
+      opts.onProgress,
+    );
+    prepared = uploaded[0] || product;
+  }
+
+  const vid = String(prepared.videoUrl || "").trim();
+  if (vid.startsWith("data:") && /video|octet-stream/i.test(vid.slice(0, 40))) {
+    opts.onProgress?.("Envoi de la vidéo vers Blob…");
+    prepared.videoUrl = await uploadMediaBlob(
+      dataUrlToBlob(vid),
+      `${prepared.id || "video"}.mp4`,
+    );
+  } else if (isIdbVideoRef(vid)) {
+    throw new Error(
+      "Vidéo encore locale (idb://). Choisissez un fichier vidéo dans le formulaire pour la publier en ligne.",
+    );
+  }
+
+  opts.onProgress?.("Publication sur le serveur…");
+  const body = await encodeStorePutBody({
+    merge: true,
+    products: [prepared],
+    users: [],
+    orders: [],
+  });
+  await putStoreBody(key, body);
+
+  const list = getProducts();
+  const i = list.findIndex((p) => p.id === prepared.id);
+  const next = [...list];
+  if (i >= 0) next[i] = /** @type {import("./shop-core.js").Product} */ (prepared);
+  else next.push(/** @type {import("./shop-core.js").Product} */ (prepared));
+  saveProducts(next, { skipRemoteSync: true });
+  return { ok: true, product: prepared };
 }
