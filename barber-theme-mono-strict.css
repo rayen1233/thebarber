@@ -1,0 +1,529 @@
+/**
+ * MONO STRICT — black & white ONLY. Loads after all other mono CSS.
+ * Allowed: #000, #fff, rgba(0,0,0,*), rgba(255,255,255,*)
+ */
+
+html.theme-mono,
+body.theme-mono {
+  background: #000 !important;
+  color: #fff !important;
+  --bg: #000 !important;
+  --text: #fff !important;
+  --gold: #fff !important;
+  --gold-soft: #fff !important;
+  --gold-dim: rgba(255, 255, 255, 0.55) !important;
+  --gold-near: #fff !important;
+  --accent: #fff !important;
+  --accent-soft: #fff !important;
+  --accent-dim: rgba(255, 255, 255, 0.55) !important;
+  --accent-border: rgba(255, 255, 255, 0.22) !important;
+  --border-gold: rgba(255, 255, 255, 0.22) !important;
+  --shop-gold: #fff !important;
+  --shop-gold-soft: #fff !important;
+  --shop-gold-dim: rgba(255, 255, 255, 0.55) !important;
+  --shop-gold-glow: rgba(255, 255, 255, 0.25) !important;
+  --shop-ivory: #fff !important;
+  --shop-muted: rgba(255, 255, 255, 0.55) !important;
+  --accent-btn-grad: #fff !important;
+  --accent-btn-text: #000 !important;
+  --lux-edge-gold: none !important;
+  --lux-glow-gold: none !important;
+  --lux-glow-gold-strong: none !important;
+  --lux-shadow-deep: none !important;
+  --lux-edge: none !important;
+  --mono-glass: transparent !important;
+  --mono-border: rgba(255, 255, 255, 0.18) !important;
+}
+
+body.theme-mono,
+body.theme-mono #page-scroll-root,
+body.theme-mono #shop-atelier,
+body.theme-mono #shop-atelier.is-open,
+body.theme-mono .order-showroom,
+body.theme-mono .admin-body,
+body.theme-mono .admin-app,
+body.theme-mono .shop-main {
+  background: #000 !important;
+  color: #fff !important;
+}
+
+body.theme-mono * {
+  text-shadow: none !important;
+}
+
+body.theme-mono .eyebrow,
+body.theme-mono .micro-label,
+body.theme-mono label,
+body.theme-mono p,
+body.theme-mono span,
+body.theme-mono h1,
+body.theme-mono h2,
+body.theme-mono h3,
+body.theme-mono h4,
+body.theme-mono a,
+body.theme-mono li,
+body.theme-mono dt,
+body.theme-mono dd,
+body.theme-mono .shop-eyebrow,
+body.theme-mono .shop-auth__eyebrow,
+body.theme-mono .shop-cart-page__eyebrow,
+body.theme-mono .mch-maison,
+body.theme-mono .shop-lede,
+body.theme-mono .shop-auth__lede,
+body.theme-mono .shop-account__meta,
+body.theme-mono [class*="gold"]:not(img):not(video) {
+  color: #fff !important;
+}
+
+body.theme-mono .lede,
+body.theme-mono .shop-muted {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* Buttons — outline only; hover invert */
+body.theme-mono button,
+body.theme-mono .btn,
+body.theme-mono .showroom-panel__cta,
+body.theme-mono .primary-btn,
+body.theme-mono .add-to-cart,
+body.theme-mono .checkout-submit,
+body.theme-mono .shop-checkout__submit,
+body.theme-mono .shop-btn-primary,
+body.theme-mono .shop-btn-primary--luxe,
+body.theme-mono .shop-btn-ghost,
+body.theme-mono .shop-cart-page__cta-final,
+body.theme-mono .shop-pd__cta-primary,
+body.theme-mono #shop-atelier .shop-btn-primary,
+body.theme-mono .mch-btn-retour,
+body.theme-mono button[type="submit"]:not(.barber-theme-dev-toggle) {
+  background: transparent !important;
+  background-image: none !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+}
+
+body.theme-mono .shop-btn-primary--luxe::before,
+body.theme-mono .shop-btn-primary--luxe::after {
+  display: none !important;
+}
+
+body.theme-mono button:hover,
+body.theme-mono .btn:hover,
+body.theme-mono .showroom-panel__cta:hover,
+body.theme-mono .primary-btn:hover,
+body.theme-mono .add-to-cart:hover,
+body.theme-mono .checkout-submit:hover,
+body.theme-mono .shop-btn-primary:hover,
+body.theme-mono .shop-btn-primary--luxe:hover,
+body.theme-mono .shop-cart-page__cta-final:hover:not(:disabled),
+body.theme-mono .shop-pd__cta-primary:hover,
+body.theme-mono button[type="submit"]:not(.barber-theme-dev-toggle):hover {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
+  transform: none !important;
+}
+
+/* Cards */
+body.theme-mono .glass-card,
+body.theme-mono .account-card,
+body.theme-mono .checkout-card,
+body.theme-mono .cart-card,
+body.theme-mono .shop-card,
+body.theme-mono .shop-product-card,
+body.theme-mono .product-detail-card,
+body.theme-mono .shop-luxe-module,
+body.theme-mono .shop-co-card,
+body.theme-mono .shop-co-summary,
+body.theme-mono .shop-auth-form-card,
+body.theme-mono .shop-account-order-card,
+body.theme-mono .shop-account-stat,
+body.theme-mono .shop-account-addr-card,
+body.theme-mono .admin-card,
+body.theme-mono #shop-atelier .shop-pd__glass,
+body.theme-mono #shop-atelier .shop-bc-card {
+  background: rgba(0, 0, 0, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Cursor / dust */
+body.theme-mono .custom-cursor__ring,
+body.theme-mono .cursor-ring {
+  border-color: #fff !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.theme-mono .custom-cursor__ring::before {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: none !important;
+}
+
+body.theme-mono .custom-cursor__dot,
+body.theme-mono .cursor-dot,
+body.theme-mono .orb,
+body.theme-mono .dust span,
+body.theme-mono .particle,
+body.theme-mono .mch-dust span,
+body.theme-mono .intro-dust span,
+body.theme-mono .showroom-panel__mote,
+body.theme-mono .shop-cat-dust-mote {
+  border-color: #fff !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+/* Scrollbar */
+html.theme-mono *,
+body.theme-mono * {
+  scrollbar-color: #fff #000 !important;
+}
+
+body.theme-mono *::-webkit-scrollbar-thumb {
+  background: #fff !important;
+  background-image: none !important;
+}
+
+body.theme-mono *::-webkit-scrollbar-track {
+  background: #000 !important;
+}
+
+/* Media — grayscale only (showroom imgs → showroom block at end) */
+body.theme-mono img:not([src*="data:"]),
+body.theme-mono video,
+body.theme-mono .order-hero__bg,
+body.theme-mono .shop-bc-card__media img,
+body.theme-mono .shop-bc-card__media video,
+body.theme-mono .shop-pd__hero-backdrop img,
+body.theme-mono .shop-pd__hero-backdrop video,
+body.theme-mono #shop-atelier .shop-pd__glass-media img,
+body.theme-mono #shop-atelier .shop-pd__glass-media video {
+  filter: grayscale(1) saturate(0) !important;
+  sepia: none !important;
+}
+
+body.theme-mono [style*="gold"],
+body.theme-mono [style*="yellow"],
+body.theme-mono [style*="brown"] {
+  color: #fff !important;
+  border-color: #fff !important;
+  background: #000 !important;
+}
+
+/* Kill warm / gold decorative layers */
+body.theme-mono .intro-grain-gold,
+body.theme-mono .shop-pd__hero-vignette--gold,
+body.theme-mono .intro-corona,
+body.theme-mono .intro-beam,
+body.theme-mono .intro-beam-v,
+body.theme-mono .intro-corner,
+body.theme-mono .logo-halo,
+body.theme-mono .shop-cat__gold-leak,
+body.theme-mono .shop-pd__hero-gold,
+body.theme-mono #shop-luxury-route-overlay .shop-luxury-route-overlay__gold,
+body.theme-mono .order-hero__amb,
+body.theme-mono .order-hero__warm-focus,
+body.theme-mono .order-hero__leak--l,
+body.theme-mono .order-hero__leak--r,
+body.theme-mono .mch-atmosphere__mist,
+body.theme-mono .shop-acc-hero__glow,
+body.theme-mono .shop-lux-card__glow {
+  background: transparent !important;
+  background-image: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Showroom — see end of file (loads after pure/final overrides) */
+
+/* Chrome / nav */
+body.theme-mono #shop-atelier.is-open .shop-chrome__back,
+body.theme-mono #shop-atelier.is-open .shop-chrome .shop-cart-btn,
+body.theme-mono #shop-atelier.is-open .shop-chrome__auth,
+body.theme-mono #shop-atelier.is-open .shop-chrome__account {
+  background: transparent !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: none !important;
+}
+
+body.theme-mono .shop-chrome__cart-count,
+body.theme-mono .shop-cart-btn__count {
+  background: #fff !important;
+  color: #000 !important;
+  border: 1px solid #fff !important;
+}
+
+/* Forms */
+body.theme-mono input,
+body.theme-mono select,
+body.theme-mono textarea,
+body.theme-mono .shop-auth__input,
+body.theme-mono .admin-inp {
+  background: #000 !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+body.theme-mono input:focus,
+body.theme-mono .shop-auth__input:focus {
+  border-color: #fff !important;
+  box-shadow: 0 0 0 1px #fff !important;
+}
+
+body.theme-mono .shop-auth__radio input,
+body.theme-mono .shop-auth__check input {
+  accent-color: #fff !important;
+}
+
+/* Avatar / badges — no grey gradients */
+body.theme-mono .avatar,
+body.theme-mono .badge,
+body.theme-mono .account-avatar,
+body.theme-mono .shop-acc-hero__avatar,
+body.theme-mono .shop-account-hero__avatar,
+body.theme-mono .shop-acc-hero__disc-badge,
+body.theme-mono .shop-account__discount-badge,
+body.theme-mono .shop-pd__badge--stock {
+  background: transparent !important;
+  background-image: none !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: none !important;
+}
+
+body.theme-mono .mch-hero-title {
+  color: #fff !important;
+  text-shadow: none !important;
+  animation: none !important;
+}
+
+body.theme-mono .shop-product-card:hover,
+body.theme-mono .shop-luxe-module:hover {
+  box-shadow: none !important;
+}
+
+/* Text gradients → flat white */
+body.theme-mono .site h1 em,
+body.theme-mono .shop-product-card__price,
+body.theme-mono .shop-chrome__logo-mark,
+body.theme-mono #shop-atelier .shop-bc-card__price {
+  background: none !important;
+  background-image: none !important;
+  -webkit-text-fill-color: #fff !important;
+  color: #fff !important;
+}
+
+body.theme-mono .shop-drawer,
+body.theme-mono .shop-drawer__head {
+  background: #000 !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Kill silver scrollbar / chrome gradients from final.css */
+body.theme-mono .shop-chrome__logo-mark,
+body.theme-mono .shop-cart-page__maison {
+  background: none !important;
+  background-image: none !important;
+  -webkit-text-fill-color: #fff !important;
+  color: #fff !important;
+}
+
+body.theme-mono .barber-theme-dev-toggle {
+  background: transparent !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+}
+
+body.theme-mono .barber-theme-dev-toggle:hover {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+/* Progress dots / timeline */
+body.theme-mono .shop-checkout-progress__step.is-active::before,
+body.theme-mono .shop-auth-benefit__dot,
+body.theme-mono .shop-account-timeline__node {
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+body.theme-mono .shop-account-timeline::before {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* ═══ Showroom — cinematic B&W, visible photos (wins over pure/final) ═══ */
+
+/* Photos — grayscale cinematic, always visible */
+body.theme-mono .showroom-panel__img,
+body.theme-mono #order-showroom .showroom-panel__img {
+  opacity: 1 !important;
+  visibility: visible !important;
+  background: none !important;
+  filter: grayscale(1) brightness(0.38) contrast(1.45) saturate(0) !important;
+}
+
+body.theme-mono .showroom-panel:hover .showroom-panel__img,
+body.theme-mono #order-showroom .showroom-panel:hover .showroom-panel__img {
+  opacity: 1 !important;
+  filter: grayscale(1) brightness(0.78) contrast(1.35) saturate(0) !important;
+}
+
+body.theme-mono .showroom-split__panels:hover .showroom-panel:not(:hover) .showroom-panel__img,
+body.theme-mono #order-showroom .showroom-split__panels:hover .showroom-panel:not(:hover) .showroom-panel__img,
+body.theme-mono #order-showroom .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__img {
+  opacity: 0.55 !important;
+  filter: grayscale(1) brightness(0.22) contrast(1.4) saturate(0) !important;
+}
+
+/* Dim via image only — not whole-panel opacity from final/pure */
+body.theme-mono #order-showroom .showroom-split__panels:hover .showroom-panel:not(:hover),
+body.theme-mono #order-showroom .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover) {
+  opacity: 1 !important;
+}
+
+/* Grid lines hidden */
+body.theme-mono .showroom-split__vline,
+body.theme-mono .showroom-split__hline,
+body.theme-mono #order-showroom .showroom-split__vline,
+body.theme-mono #order-showroom .showroom-split__hline {
+  opacity: 0 !important;
+  display: none !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel__border {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel {
+  border: none !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+}
+
+/* No warm bloom / sweep — vignettes stay black gradients only */
+body.theme-mono #order-showroom .showroom-panel__bloom,
+body.theme-mono #order-showroom .showroom-panel__light,
+body.theme-mono #order-showroom .showroom-panel__sweep {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel__cine {
+  opacity: 0.55 !important;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.35) 0%,
+    transparent 42%,
+    rgba(0, 0, 0, 0.4) 100%
+  ) !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel:hover .showroom-panel__cine {
+  opacity: 0.38 !important;
+}
+
+body.theme-mono #order-showroom .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__cine {
+  opacity: 0.62 !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel__shade {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.28) 45%,
+    transparent 72%
+  ) !important;
+  opacity: 0.72 !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel:hover .showroom-panel__shade {
+  opacity: 0.5 !important;
+}
+
+body.theme-mono #order-showroom .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__shade {
+  opacity: 0.78 !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel__vig {
+  background: radial-gradient(
+    ellipse 118% 118% at 50% 50%,
+    transparent 34%,
+    rgba(0, 0, 0, 0.35) 68%,
+    rgba(0, 0, 0, 0.65) 100%
+  ) !important;
+  box-shadow: inset 0 0 72px rgba(0, 0, 0, 0.45) !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel::before {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.12),
+    rgba(0, 0, 0, 0.38)
+  ) !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel::after {
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.03),
+    transparent 70%
+  ) !important;
+}
+
+/* CTA — outline pill (override final/pure grey glass) */
+body.theme-mono .showroom-panel__cta,
+body.theme-mono #order-showroom .showroom-panel__cta {
+  background: transparent !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+  border-radius: 999px !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+body.theme-mono .showroom-panel__cta:hover,
+body.theme-mono #order-showroom .showroom-panel__cta:hover,
+body.theme-mono #order-showroom .showroom-panel:hover .showroom-panel__cta {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel__cta::before {
+  display: none !important;
+}
+
+body.theme-mono #order-showroom .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__cta {
+  opacity: 1 !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel__title {
+  color: #fff !important;
+}
+
+body.theme-mono #order-showroom .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__title {
+  color: rgba(255, 255, 255, 0.55) !important;
+}

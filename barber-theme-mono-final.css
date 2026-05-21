@@ -1,0 +1,481 @@
+/**
+ * Monochrome theme — FINAL kill-switch (loads after all CSS including intro inline).
+ * Zero gold / yellow / brown / sepia when html/body have .theme-mono
+ */
+
+html.theme-mono,
+body.theme-mono {
+  --gold: #f5f5f5 !important;
+  --gold-soft: #ffffff !important;
+  --gold-dim: rgba(255, 255, 255, 0.35) !important;
+  --gold-near: rgba(255, 255, 255, 0.5) !important;
+  --accent: #f5f5f5 !important;
+  --accent-soft: #d8d8d8 !important;
+  --accent-dim: rgba(255, 255, 255, 0.32) !important;
+  --border-gold: rgba(255, 255, 255, 0.18) !important;
+  --shop-gold: #f5f5f5 !important;
+  --shop-gold-soft: #ffffff !important;
+  --shop-gold-dim: rgba(255, 255, 255, 0.35) !important;
+  --shop-gold-glow: rgba(255, 255, 255, 0.45) !important;
+  --lux-edge-gold: 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+  --lux-glow-gold: 0 0 48px rgba(255, 255, 255, 0.06) !important;
+  --lux-glow-gold-strong: 0 0 56px rgba(255, 255, 255, 0.1) !important;
+  --shop-pd-glass-border: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* —— Scrollbars (everywhere) —— */
+html.theme-mono *,
+body.theme-mono * {
+  scrollbar-color: rgba(255, 255, 255, 0.55) rgba(255, 255, 255, 0.08) !important;
+}
+
+html.theme-mono *::-webkit-scrollbar-thumb,
+body.theme-mono *::-webkit-scrollbar-thumb {
+  background: #fff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html.theme-mono #shop-atelier.is-open::-webkit-scrollbar-thumb,
+body.theme-mono #shop-atelier.is-open::-webkit-scrollbar-thumb,
+html.theme-mono #shop-atelier .shop-pd__info::-webkit-scrollbar-thumb,
+html.theme-mono #shop-atelier .shop-cat__scroller::-webkit-scrollbar-thumb,
+body.theme-mono #shop-atelier .shop-pd__info::-webkit-scrollbar-thumb,
+body.theme-mono #shop-atelier .shop-cat__scroller::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* —— Warm image / video filters → neutral (hero excluded — full color) —— */
+body.theme-mono .hero-bg,
+body.theme-mono .shop-card img,
+body.theme-mono .shop-product-card__img img,
+body.theme-mono .product-hero img,
+body.theme-mono .product-hero video,
+body.theme-mono .shop-pd__hero-backdrop img,
+body.theme-mono .shop-pd__hero-backdrop video,
+body.theme-mono #shop-atelier .shop-pd__glass-media img,
+body.theme-mono #shop-atelier .shop-pd__glass-media video,
+body.theme-mono .shop-pd__media-stack__back video,
+body.theme-mono .shop-pd__media-stack__back img,
+body.theme-mono .mch-atmosphere__photo {
+  filter: grayscale(1) brightness(0.72) contrast(1.08) saturate(0) sepia(0) hue-rotate(0deg) !important;
+}
+
+body.theme-mono .order-hero__bg,
+body.theme-mono body.intro-reveal .order-hero__bg,
+body.theme-mono .order-hero__imgbox img,
+body.theme-mono .order-hero__imgbox video {
+  animation: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+/* —— Sepia / warm overlays —— */
+body.theme-mono .hero::before,
+body.theme-mono .shop-shell::before,
+body.theme-mono #order-showroom::before,
+body.theme-mono .order-hero__amb,
+body.theme-mono .order-hero__wash,
+body.theme-mono .shop-cat__gold-leak,
+body.theme-mono .shop-pd__hero-gold,
+body.theme-mono .intro-corona,
+body.theme-mono .intro-beam,
+body.theme-mono .intro-beam-v,
+body.theme-mono .mch-atmosphere__mist,
+body.theme-mono .shop-auth-page__ambient::before,
+body.theme-mono .shop-checkout-page__ambient::before,
+body.theme-mono #shop-luxury-route-overlay .shop-luxury-route-overlay__gold,
+body.theme-mono .shop-acc-hero__glow,
+body.theme-mono .shop-lux-card__glow {
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.08),
+    transparent 55%
+  ) !important;
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.08),
+    transparent 55%
+  ) !important;
+  opacity: 1 !important;
+}
+
+body.theme-mono .order-hero__amb {
+  mix-blend-mode: normal !important;
+  opacity: 0.25 !important;
+}
+
+body.theme-mono .order-hero__wash {
+  mix-blend-mode: multiply !important;
+  background: linear-gradient(
+    168deg,
+    rgba(0, 0, 0, 0.5) 0%,
+    transparent 38%,
+    rgba(0, 0, 0, 0.35) 100%
+  ) !important;
+}
+
+body.theme-mono .logo-halo,
+body.theme-mono .intro-grain-gold,
+body.theme-mono .shop-pd__hero-vignette--gold {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 65%
+  ) !important;
+  opacity: 0.5 !important;
+}
+
+/* Buttons → barber-theme-mono-barberclub.css (outline invert) */
+
+body.theme-mono .shop-btn-ghost,
+body.theme-mono .mch-btn-retour {
+  box-shadow: none !important;
+}
+
+/* —— Cards / borders —— */
+body.theme-mono .glass-card,
+body.theme-mono .account-card,
+body.theme-mono .checkout-card,
+body.theme-mono .cart-card,
+body.theme-mono .shop-card,
+body.theme-mono .shop-product-card,
+body.theme-mono .shop-luxe-module,
+body.theme-mono .shop-co-card,
+body.theme-mono .shop-co-summary,
+body.theme-mono .shop-auth-form-card,
+body.theme-mono .shop-account-order-card,
+body.theme-mono .admin-card,
+body.theme-mono .showroom-panel__border,
+body.theme-mono .mch-frame,
+body.theme-mono .mch-frame--inner {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 24px 70px rgba(0, 0, 0, 0.55) !important;
+}
+
+body.theme-mono .shop-product-card:hover,
+body.theme-mono .shop-luxe-module:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 28px 80px rgba(0, 0, 0, 0.58),
+    0 0 40px rgba(255, 255, 255, 0.06) !important;
+}
+
+/* —— Cursor / dust / particles —— */
+body.theme-mono .custom-cursor__ring,
+body.theme-mono .cursor-ring {
+  border-color: rgba(255, 255, 255, 0.42) !important;
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.18) !important;
+}
+
+body.theme-mono .custom-cursor__ring::before {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15) !important;
+}
+
+body.theme-mono .custom-cursor.is-interactive .custom-cursor__ring {
+  border-color: rgba(255, 255, 255, 0.72) !important;
+  box-shadow: 0 0 28px rgba(255, 255, 255, 0.22) !important;
+}
+
+body.theme-mono .custom-cursor__dot,
+body.theme-mono .cursor-dot,
+body.theme-mono .orb,
+body.theme-mono .dust span,
+body.theme-mono .particle,
+body.theme-mono .mch-dust span,
+body.theme-mono .intro-dust span,
+body.theme-mono .showroom-panel__mote,
+body.theme-mono .shop-cat-dust-mote {
+  border-color: rgba(255, 255, 255, 0.42) !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  background-color: rgba(255, 255, 255, 0.75) !important;
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.18) !important;
+}
+
+/* —— Avatar / badges —— */
+body.theme-mono .avatar,
+body.theme-mono .badge,
+body.theme-mono .account-avatar,
+body.theme-mono .shop-acc-hero__avatar,
+body.theme-mono .shop-account-hero__avatar,
+body.theme-mono .shop-acc-hero__disc-badge,
+body.theme-mono .shop-account__discount-badge,
+body.theme-mono .shop-pd__badge--stock {
+  background: transparent !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: none !important;
+}
+
+/* —— Text accents —— */
+body.theme-mono .eyebrow,
+body.theme-mono .micro-label,
+body.theme-mono .shop-eyebrow,
+body.theme-mono .shop-auth__eyebrow,
+body.theme-mono .mch-maison,
+body.theme-mono .shop-cart-page__maison,
+body.theme-mono [class*="gold"]:not(img):not(video) {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+
+body.theme-mono .site h1 em,
+body.theme-mono .shop-product-card__price,
+body.theme-mono .shop-chrome__logo-mark {
+  background: linear-gradient(115deg, #fff, #d0d0d0 45%, #6f6f6f) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
+
+body.theme-mono .mch-hero-title {
+  animation: none !important;
+  color: rgba(252, 252, 252, 0.96) !important;
+  text-shadow:
+    0 0 40px rgba(255, 255, 255, 0.1),
+    0 0 80px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Showroom split lines → see showroom mono block at end of file */
+
+body.theme-mono .order-hero__lux-tl-h,
+body.theme-mono .order-hero__lux-tr-h,
+body.theme-mono .order-hero__lux-bl-h,
+body.theme-mono .order-hero__lux-br-h,
+body.theme-mono .order-hero__lux-tl-v,
+body.theme-mono .order-hero__lux-tr-v,
+body.theme-mono .order-hero__lux-bl-v,
+body.theme-mono .order-hero__lux-br-v {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.38),
+    rgba(255, 255, 255, 0.15),
+    transparent
+  ) !important;
+}
+
+body.theme-mono .order-hero__lux-tr-h,
+body.theme-mono .order-hero__lux-br-h {
+  background: linear-gradient(
+    270deg,
+    rgba(255, 255, 255, 0.38),
+    rgba(255, 255, 255, 0.15),
+    transparent
+  ) !important;
+}
+
+body.theme-mono .order-hero__lux-tl-v,
+body.theme-mono .order-hero__lux-tr-v,
+body.theme-mono .order-hero__lux-bl-v,
+body.theme-mono .order-hero__lux-br-v {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.35),
+    rgba(255, 255, 255, 0.12),
+    transparent
+  ) !important;
+}
+
+/* —— Logo / intro cinematic —— */
+body.theme-mono .logo,
+body.theme-mono .logo-name,
+body.theme-mono .cine-logo-lit,
+body.theme-mono .cine-logo-base,
+body.theme-mono .custom-cursor__mark,
+body.theme-mono img[src*="logo" i] {
+  filter: grayscale(1) brightness(1.2) contrast(1.05) saturate(0) !important;
+}
+
+body.theme-mono .cine-logo-lit {
+  filter: grayscale(1) brightness(1.5) contrast(1.1) saturate(0) !important;
+}
+
+/* —— Shop chrome / cart badge —— */
+body.theme-mono #shop-atelier.is-open .shop-chrome__back,
+body.theme-mono #shop-atelier.is-open .shop-chrome .shop-cart-btn,
+body.theme-mono #shop-atelier.is-open .shop-chrome__auth,
+body.theme-mono #shop-atelier.is-open .shop-chrome__account {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.06) !important;
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.8) !important;
+}
+
+body.theme-mono .shop-chrome__cart-count,
+body.theme-mono .shop-cart-btn__count {
+  background: #fff !important;
+  color: #000 !important;
+  box-shadow: none !important;
+}
+
+/* —— Inputs —— */
+body.theme-mono .shop-auth__input:focus,
+body.theme-mono .shop-auth__textarea:focus,
+body.theme-mono .admin-inp:focus {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0 28px rgba(255, 255, 255, 0.1) !important;
+}
+
+body.theme-mono .shop-auth__radio input,
+body.theme-mono .shop-auth__check input {
+  accent-color: #d4d4d4 !important;
+}
+
+/* —— Progress / timeline dots —— */
+body.theme-mono .shop-checkout-progress__step.is-active::before,
+body.theme-mono .shop-checkout-progress__step.is-done::before,
+body.theme-mono .shop-auth-benefit__dot,
+body.theme-mono .shop-account-timeline__node {
+  background: #fff !important;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.4) !important;
+}
+
+body.theme-mono .shop-account-timeline::before {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.35),
+    rgba(255, 255, 255, 0.08)
+  ) !important;
+}
+
+/* —— Shimmer / sheen lines —— */
+body.theme-mono .shop-btn-primary--luxe::before,
+body.theme-mono .showroom-panel__cta-sheen,
+body.theme-mono .mch-frame-shine {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  ) !important;
+}
+
+/* —— Order showroom background (warm radial) —— */
+body.theme-mono .order-showroom {
+  background:
+    radial-gradient(
+      ellipse 92% 88% at 50% 44%,
+      #121212 0%,
+      #0a0a0a 40%,
+      #030303 72%,
+      #000 100%
+    ),
+    #000 !important;
+}
+
+/* Showroom CTA/light → see showroom mono block at end of file */
+
+/* —— PDP glass / backdrop —— */
+body.theme-mono #shop-atelier .shop-pd__glass {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(255, 255, 255, 0.04) !important;
+}
+
+body.theme-mono .shop-pd__hero-backdrop {
+  filter: grayscale(1) brightness(0.35) contrast(1.05) saturate(0) blur(28px) !important;
+}
+
+body.theme-mono .shop-pd__galerie-thumb.is-active {
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.12) !important;
+}
+
+/* —— Kill box-shadows that use gold rgba —— */
+body.theme-mono .shop-chrome__logo-mark,
+body.theme-mono .shop-cart-btn,
+body.theme-mono .shop-drawer__head {
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.06) !important;
+}
+
+/* —— Intro cinematic warm layers —— */
+body.theme-mono .intro-corner,
+body.theme-mono .intro-beam,
+body.theme-mono .intro-beam-v,
+body.theme-mono .intro-light-leak,
+body.theme-mono .intro-grain-warm {
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 65%
+  ) !important;
+  opacity: 0.35 !important;
+}
+
+body.theme-mono .intro-dust span {
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+body.theme-mono .file-proto-warn code {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--gold-soft) !important;
+}
+
+/* —— Order hero warm leaks / grade —— */
+body.theme-mono .order-hero__leak--l,
+body.theme-mono .order-hero__leak--r,
+body.theme-mono .order-hero__warm-focus,
+body.theme-mono .order-hero__haze,
+body.theme-mono .order-hero__rake,
+body.theme-mono .order-hero__bloom,
+body.theme-mono .order-hero__grade,
+body.theme-mono .order-hero__film,
+body.theme-mono .order-hero__lux-g--tl,
+body.theme-mono .order-hero__lux-g--tr,
+body.theme-mono .order-hero__lux-g--bl,
+body.theme-mono .order-hero__lux-g--br,
+body.theme-mono .order-hero__atm {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.07) 0%,
+    transparent 60%
+  ) !important;
+  opacity: 0.35 !important;
+}
+
+body.theme-mono .order-hero__particle,
+body.theme-mono .order-hero__particle--near,
+body.theme-mono .order-hero__particle--mid,
+body.theme-mono .order-hero__particle--far,
+body.theme-mono .order-hero__particle--hero {
+  background: rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2) !important;
+}
+
+body.theme-mono .order-hero__cta:hover {
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  color: #f5f5f5 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 32px rgba(0, 0, 0, 0.44),
+    0 0 28px rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Showroom grade layers → see showroom mono block at end of file */
+
+/* —— Shop drawer / nav gold text-shadow —— */
+body.theme-mono .shop-chrome__logo-text,
+body.theme-mono .shop-cat__title,
+body.theme-mono .shop-cart-page__title {
+  text-shadow: 0 0 28px rgba(255, 255, 255, 0.08) !important;
+}
+
+body.theme-mono .shop-drawer__head {
+  border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.theme-mono .shop-acc-hero__glow,
+body.theme-mono .shop-lux-card__glow,
+body.theme-mono .shop-auth-brand-panel::after {
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 0%,
+    rgba(255, 255, 255, 0.06),
+    transparent 55%
+  ) !important;
+}
+
+/* Showroom 2×2 + CTA → barber-theme-mono-barberclub.css */

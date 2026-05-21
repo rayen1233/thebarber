@@ -1,0 +1,432 @@
+/**
+ * Dark luxury monochrome — Saint Laurent / atelier campaign mood.
+ * Loads last. Pure #000 / #fff type; glass UI, cinematic showroom.
+ */
+
+html.theme-mono,
+body.theme-mono {
+  --bg: #000;
+  --text: #fff;
+  --mono-border: rgba(255, 255, 255, 0.12);
+  --mono-border-hover: rgba(255, 255, 255, 0.32);
+  --mono-glass: rgba(255, 255, 255, 0.04);
+  --mono-glass-hover: #fff;
+  --mono-label: rgba(255, 255, 255, 0.45);
+  --mono-ease: cubic-bezier(0.19, 1, 0.22, 1);
+  --mono-t: 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+
+  --gold: #fff;
+  --gold-soft: #fff;
+  --gold-dim: rgba(255, 255, 255, 0.45);
+  --accent: #fff;
+  --accent-soft: #fff;
+  --accent-dim: var(--mono-label);
+  --accent-border: var(--mono-border);
+  --accent-border-hover: var(--mono-border-hover);
+  --border-gold: var(--mono-border);
+  --shop-gold: #fff;
+  --shop-gold-soft: #fff;
+  --shop-ivory: #fff;
+  --shop-muted: var(--mono-label);
+  --lux-edge: 0 0 0 1px var(--mono-border);
+  --lux-edge-gold: 0 0 0 1px var(--mono-border);
+}
+
+body.theme-mono {
+  background: #000 !important;
+  color: #fff !important;
+}
+
+/* Global motion */
+body.theme-mono a,
+body.theme-mono button,
+body.theme-mono .shop-bc-card,
+body.theme-mono .shop-product-card,
+body.theme-mono .glass-card,
+body.theme-mono .showroom-panel,
+body.theme-mono .showroom-panel__img,
+body.theme-mono .showroom-panel__cta {
+  transition:
+    transform var(--mono-t),
+    opacity 0.6s ease,
+    filter var(--mono-t),
+    background 0.5s ease,
+    border-color 0.5s ease,
+    color 0.45s ease,
+    box-shadow 0.5s ease !important;
+}
+
+/* Typography */
+body.theme-mono .eyebrow,
+body.theme-mono .micro-label,
+body.theme-mono .shop-eyebrow,
+body.theme-mono .shop-auth__eyebrow,
+body.theme-mono .shop-cart-page__eyebrow,
+body.theme-mono .mch-maison,
+body.theme-mono .shop-cart-page__maison {
+  color: var(--mono-label) !important;
+  letter-spacing: 0.38em;
+}
+
+body.theme-mono h1,
+body.theme-mono h2,
+body.theme-mono .shop-title,
+body.theme-mono .shop-cart-page__title,
+body.theme-mono #shop-atelier .shop-cat__title {
+  color: #fff !important;
+  font-weight: var(--type-display-weight, 700);
+  letter-spacing: 0.16em;
+}
+
+body.theme-mono .lede,
+body.theme-mono .shop-auth__lede,
+body.theme-mono .shop-account__meta,
+body.theme-mono #shop-atelier .shop-cat__subtitle {
+  color: var(--mono-label) !important;
+}
+
+/* Cards — dark glass, not flat blocks */
+body.theme-mono .glass-card,
+body.theme-mono .shop-luxe-module,
+body.theme-mono .shop-co-card,
+body.theme-mono .shop-co-summary,
+body.theme-mono .shop-auth-form-card,
+body.theme-mono .shop-account-order-card,
+body.theme-mono .admin-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--mono-border) !important;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Primary buttons — glass ghost */
+body.theme-mono .btn--gold,
+body.theme-mono .primary-btn,
+body.theme-mono .add-to-cart,
+body.theme-mono .checkout-submit,
+body.theme-mono .shop-btn-primary,
+body.theme-mono .shop-btn-primary--luxe,
+body.theme-mono .shop-cart-page__cta-final,
+body.theme-mono .shop-pd__cta-primary,
+body.theme-mono #shop-atelier .shop-btn-primary,
+body.theme-mono button[type="submit"]:not(.admin-nav__btn):not(.barber-theme-dev-toggle) {
+  background: var(--mono-glass) !important;
+  background-image: none !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+body.theme-mono .shop-btn-primary--luxe::before {
+  display: block !important;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  ) !important;
+  opacity: 0.6;
+}
+
+body.theme-mono .shop-btn-primary:hover,
+body.theme-mono .shop-btn-primary--luxe:hover,
+body.theme-mono .shop-cart-page__cta-final:hover:not(:disabled),
+body.theme-mono button[type="submit"]:not(.admin-nav__btn):not(.barber-theme-dev-toggle):hover {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
+  transform: translateY(-2px);
+  filter: none !important;
+}
+
+body.theme-mono .shop-btn-ghost {
+  background: transparent !important;
+  color: #fff !important;
+  border: 1px solid var(--mono-border) !important;
+}
+
+body.theme-mono .shop-btn-ghost:hover {
+  border-color: var(--mono-border-hover) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Forms */
+body.theme-mono input,
+body.theme-mono select,
+body.theme-mono textarea,
+body.theme-mono .shop-auth__input,
+body.theme-mono .admin-inp {
+  background: rgba(0, 0, 0, 0.6) !important;
+  color: #fff !important;
+  border: 1px solid var(--mono-border) !important;
+}
+
+body.theme-mono input:focus,
+body.theme-mono .shop-auth__input:focus {
+  border-color: var(--mono-border-hover) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Scrollbar — minimal */
+html.theme-mono *,
+body.theme-mono * {
+  scrollbar-color: rgba(255, 255, 255, 0.35) #000;
+}
+
+html.theme-mono *::-webkit-scrollbar-thumb,
+body.theme-mono *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28) !important;
+}
+
+/* Avatar — glass disc */
+body.theme-mono .shop-acc-hero__avatar {
+  background: var(--mono-glass) !important;
+  color: #fff !important;
+  border: 1px solid var(--mono-border-hover) !important;
+  backdrop-filter: blur(10px);
+}
+
+body.theme-mono .shop-acc-hero__disc-badge {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+  border: 1px solid var(--mono-border) !important;
+}
+
+/* Chrome pills */
+body.theme-mono #shop-atelier.is-open .shop-chrome__back,
+body.theme-mono #shop-atelier.is-open .shop-chrome .shop-cart-btn,
+body.theme-mono #shop-atelier.is-open .shop-chrome__auth,
+body.theme-mono #shop-atelier.is-open .shop-chrome__account {
+  background: var(--mono-glass) !important;
+  color: #fff !important;
+  border: 1px solid var(--mono-border) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: none !important;
+}
+
+body.theme-mono .shop-chrome__cart-count {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+/* ═══ Showroom — fused cinematic wall (no visible grid) ═══ */
+body.theme-mono #order-showroom {
+  background: #000 !important;
+  isolation: isolate;
+}
+
+/* Moving grain over entire showroom */
+body.theme-mono #order-showroom::before {
+  opacity: 0.07 !important;
+  visibility: visible !important;
+  z-index: 50 !important;
+  mix-blend-mode: overlay !important;
+  animation: monoShowroomGrainShift 0.55s steps(2) infinite !important;
+}
+
+@keyframes monoShowroomGrainShift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-1.2%, 0.8%);
+  }
+}
+
+body.theme-mono #order-showroom .showroom-split {
+  padding: clamp(2rem, 4vw, 6rem);
+  box-sizing: border-box;
+}
+
+/* Kill hard 2×2 grid lines */
+body.theme-mono #order-showroom .showroom-split__vline,
+body.theme-mono #order-showroom .showroom-split__hline {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel__border {
+  display: none !important;
+  opacity: 0 !important;
+  border: none !important;
+}
+
+body.theme-mono #order-showroom .showroom-split__panels {
+  gap: 0 !important;
+}
+
+/* Fused panels — separation via shadow only */
+body.theme-mono #order-showroom .showroom-panel {
+  position: relative;
+  z-index: 1;
+  border: none !important;
+  outline: none !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+  transition:
+    opacity 900ms cubic-bezier(0.19, 1, 0.22, 1),
+    z-index 0ms linear 0ms,
+    filter 900ms cubic-bezier(0.19, 1, 0.22, 1) !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel:hover {
+  z-index: 4 !important;
+}
+
+body.theme-mono #order-showroom .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover) {
+  opacity: 1 !important;
+}
+
+/* Layered cinematic overlays on each panel */
+body.theme-mono #order-showroom .showroom-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.28) 100%
+  );
+  transition: opacity 900ms cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+body.theme-mono #order-showroom .showroom-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.04),
+    transparent 70%
+  );
+  transition: opacity 900ms cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+body.theme-mono #order-showroom .showroom-panel__bottom {
+  padding: min(12vh, 5rem) clamp(1.5rem, 4vw, 3rem) min(5vh, 2.5rem) !important;
+}
+
+/* Showroom image filters → barber-theme-mono-barberclub.css */
+
+/* Panel overlays → barber-theme-mono-barberclub.css / strict */
+
+body.theme-mono #order-showroom .showroom-panel__grain {
+  opacity: 0.065 !important;
+  mix-blend-mode: overlay !important;
+  animation: monoShowroomGrainShift 0.6s steps(2) infinite !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel__bloom,
+body.theme-mono #order-showroom .showroom-panel__light,
+body.theme-mono #order-showroom .showroom-panel__sweep {
+  opacity: 0 !important;
+}
+
+/* Titles */
+body.theme-mono #order-showroom .showroom-panel__title {
+  color: #fff !important;
+  text-shadow: 0 12px 48px rgba(0, 0, 0, 0.85) !important;
+  font-weight: 400;
+  transition: color 900ms cubic-bezier(0.19, 1, 0.22, 1), opacity 900ms ease;
+}
+
+body.theme-mono #order-showroom .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__title {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Showroom CTA → barber-theme-mono-barberclub.css */
+
+/* Atmosphere — soft white, slow */
+body.theme-mono .intro-corona,
+body.theme-mono .logo-halo {
+  opacity: 0.35 !important;
+  visibility: visible !important;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.06) 0%,
+    transparent 68%
+  ) !important;
+  animation: monoAmbientPulse 12s ease-in-out infinite;
+}
+
+body.theme-mono #shop-atelier .shop-cat__gold-leak {
+  opacity: 0.4 !important;
+  visibility: visible !important;
+  background: radial-gradient(
+    ellipse 80% 50% at 50% 0%,
+    rgba(255, 255, 255, 0.05) 0%,
+    transparent 60%
+  ) !important;
+}
+
+body.theme-mono #shop-atelier .shop-cat__grain {
+  opacity: 0.06 !important;
+  visibility: visible !important;
+}
+
+@keyframes monoAmbientPulse {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.42;
+  }
+}
+
+body.theme-mono .showroom-panel__mote,
+body.theme-mono .custom-cursor__dot {
+  background: rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.14) !important;
+}
+
+body.theme-mono .custom-cursor__ring {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Shop category grid → barber-theme-mono-barberclub.css */
+
+/* PDP & other media */
+body.theme-mono .shop-pd__hero-backdrop img,
+body.theme-mono .shop-pd__hero-backdrop video,
+body.theme-mono #shop-atelier .shop-pd__glass-media img,
+body.theme-mono #shop-atelier .shop-pd__glass-media video {
+  filter: grayscale(1) contrast(1.2) brightness(0.45) saturate(0) !important;
+}
+
+body.theme-mono .site h1 em,
+body.theme-mono .shop-product-card__price,
+body.theme-mono #shop-atelier .shop-bc-card__price {
+  color: #fff !important;
+  background: none !important;
+  -webkit-text-fill-color: #fff;
+}
+
+body.theme-mono .barber-theme-dev-toggle {
+  background: var(--mono-glass) !important;
+  color: #fff !important;
+  border: 1px solid var(--mono-border) !important;
+  backdrop-filter: blur(10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.theme-mono .intro-corona,
+  body.theme-mono .logo-halo {
+    animation: none !important;
+  }
+}

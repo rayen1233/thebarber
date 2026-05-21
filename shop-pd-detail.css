@@ -1,0 +1,1711 @@
+/* Product detail — cinematic glass PDP (scoped under #shop-atelier / .shop-pdp) */
+
+#shop-atelier {
+  --shop-font-profile: var(--font-editorial, "Instrument Serif", Georgia, serif);
+  --shop-pd-font-title: var(--shop-font-display, "Orbitron", sans-serif);
+  --shop-pd-glass-border: rgba(210, 180, 95, 0.18);
+  --shop-pd-glass-bg: rgba(10, 10, 10, 0.46);
+  --shop-pd-r-card: 28px;
+  --shop-pd-r-media: 28px;
+  --shop-pd-r-mosaic: 22px;
+  --shop-pd-r-cta: 16px;
+  --shop-pd-media-ratio: 43fr;
+  --shop-pd-content-ratio: 57fr;
+  --shop-pd-split-media: 43vw;
+  --shop-pd-copy-max: 34ch;
+  --shop-pd-copy-panel-max: min(56rem, 100%);
+}
+
+/* —— Root PDP shell —— */
+#shop-atelier .shop-pd.shop-pdp {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background:
+    radial-gradient(ellipse 95% 65% at 18% 42%, rgba(120, 92, 36, 0.08) 0%, transparent 52%),
+    radial-gradient(ellipse 120% 80% at 50% 0%, #14120c 0%, #060605 48%, #020202 100%);
+}
+
+#shop-atelier #shop-view-detail:not([hidden]) #pd-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+#shop-atelier #shop-view-detail:not([hidden]) #pd-missing:not([hidden]) {
+  padding-top: clamp(4.25rem, 10vh, 5.5rem);
+}
+
+/* —— Ambient dust (between backdrop and glass) —— */
+#shop-atelier .shop-pd__ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#shop-atelier .shop-pd-mote {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  margin: -1px 0 0 -1px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 248, 232, 0.42) 0%, transparent 72%);
+  opacity: 0.14;
+  animation: shopPdMoteDrift var(--pd-m-dur, 24s) ease-in-out var(--pd-m-del, 0s) infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes shopPdMoteDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translate3d(var(--pd-m-x, 6px), var(--pd-m-y, -18px), 0);
+    opacity: 0.28;
+  }
+}
+
+/* —— Hero stage (full-viewport cinematic field) —— */
+#shop-atelier .shop-pd__hero-stage {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: max(100dvh, 640px);
+  padding: clamp(5.25rem, 11vh, 6.75rem) clamp(1rem, 4.2vw, 2.25rem) clamp(1.75rem, 4vh, 2.75rem);
+  isolation: isolate;
+}
+
+/* —— Blurred hero backdrop —— */
+#shop-atelier .shop-pd__hero-back {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #030303;
+}
+
+#shop-atelier .shop-pd__hero-back-scale {
+  position: absolute;
+  inset: -12%;
+  opacity: 1;
+  transform: scale(1.06);
+  filter: blur(28px) saturate(1.12);
+  will-change: transform, filter;
+}
+
+#shop-atelier .shop-pd__hero-back-inner {
+  position: absolute;
+  inset: 0;
+}
+
+#shop-atelier .shop-pd__hero-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.02);
+  pointer-events: none;
+}
+
+#shop-atelier .shop-pd__hero-gold {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.68) 42%, rgba(0, 0, 0, 0.78) 100%),
+    radial-gradient(ellipse 90% 70% at 50% 42%, rgba(120, 92, 36, 0.2) 0%, transparent 62%),
+    radial-gradient(ellipse 55% 45% at 50% 100%, rgba(210, 180, 95, 0.14) 0%, transparent 55%);
+  mix-blend-mode: multiply;
+}
+
+#shop-atelier .shop-pd__hero-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  box-shadow:
+    inset 0 0 120px 40px rgba(0, 0, 0, 0.55),
+    inset 0 0 40px 12px rgba(0, 0, 0, 0.35);
+  background: radial-gradient(ellipse 78% 70% at 50% 48%, transparent 0%, transparent 36%, rgba(0, 0, 0, 0.5) 100%);
+  pointer-events: none;
+}
+
+#shop-atelier .shop-pd__hero-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+#shop-atelier .shop-pd__hero-radial {
+  position: absolute;
+  inset: -20%;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.35;
+  background: radial-gradient(circle at 50% 38%, rgba(210, 185, 120, 0.09) 0%, transparent 42%);
+  animation: shopPdHeroRadial 14s ease-in-out infinite;
+}
+
+@keyframes shopPdHeroRadial {
+  0%,
+  100% {
+    transform: scale(1) translate3d(0, 0, 0);
+    opacity: 0.28;
+  }
+  50% {
+    transform: scale(1.06) translate3d(1.5%, -1.2%, 0);
+    opacity: 0.42;
+  }
+}
+
+/* —— Floating glass panel —— */
+#shop-atelier .shop-pd__glass {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  width: min(1120px, 100%);
+  border-radius: var(--shop-pd-r-card);
+  background: var(--shop-pd-glass-bg);
+  border: 1px solid var(--shop-pd-glass-border);
+  box-shadow:
+    0 40px 100px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 248, 232, 0.04) inset,
+    0 0 72px rgba(210, 180, 95, 0.06);
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  overflow: hidden;
+}
+
+#shop-atelier .shop-pd__glass-grid {
+  display: grid;
+  gap: clamp(1.35rem, 3.2vw, 2.25rem);
+  padding: clamp(1.1rem, 2.2vw, 1.45rem);
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@media (min-width: 900px) {
+  #shop-atelier .shop-pd__glass-grid {
+    grid-template-columns: var(--shop-pd-media-ratio) var(--shop-pd-content-ratio);
+    align-items: start;
+    min-height: min(calc(100dvh - 120px), 900px);
+  }
+}
+
+@media (max-width: 899.98px) {
+  #shop-atelier .shop-pd__glass-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #shop-atelier .shop-pd__glass-media {
+    order: -1;
+  }
+}
+
+/* —— In-panel media frame —— */
+#shop-atelier .shop-pd__glass-media {
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
+}
+
+@media (min-width: 900px) {
+  #shop-atelier #shop-view-detail:not([hidden]) .shop-pd__glass-media {
+    position: sticky;
+    top: clamp(4.5rem, 10vh, 5.5rem);
+    min-height: min(calc(100dvh - 120px), 860px);
+    max-height: calc(100dvh - 120px);
+  }
+
+  #shop-atelier.shop-atelier--pdp #shop-view-detail:not([hidden]) .shop-pd__glass-media,
+  #shop-atelier.shop-atelier--pdp #shop-view-detail:not([hidden]) .shop-pd__glass-body {
+    top: clamp(3.25rem, 7.5vh, 4.85rem);
+  }
+}
+
+
+#shop-atelier .shop-pd__frame {
+  position: relative;
+  flex: 1;
+  min-height: min(52vw, 420px);
+  border-radius: var(--shop-pd-r-media);
+  overflow: hidden;
+  box-shadow:
+    0 24px 56px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(255, 248, 232, 0.06);
+  background: #0a0a0a;
+}
+
+#shop-atelier .shop-pd__frame::before {
+  content: "";
+  position: absolute;
+  inset: 8% 12%;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(ellipse 72% 58% at 50% 46%, rgba(210, 180, 95, 0.14) 0%, transparent 68%);
+  opacity: 0.85;
+  filter: blur(18px);
+}
+
+#shop-atelier .shop-pd__frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 900px) {
+  #shop-atelier .shop-pd__frame {
+    min-height: 0;
+  }
+}
+
+#shop-atelier .shop-pd__visual-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: min(52vw, 420px);
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: inherit;
+}
+
+@media (min-width: 900px) {
+  #shop-atelier .shop-pd__visual-wrap {
+    min-height: 100%;
+  }
+}
+
+#shop-atelier .shop-pd__visual-inner {
+  position: absolute;
+  inset: -2%;
+  transform: translate3d(var(--pd-tx, 0px), var(--pd-ty, 0px), 0);
+  transition: transform 0.65s cubic-bezier(0.22, 0.65, 0.16, 1);
+  will-change: transform;
+}
+
+#shop-atelier .shop-pd__visual {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+  animation: shopPdVisualBreathe 22s ease-in-out infinite;
+  transition:
+    opacity 0.45s cubic-bezier(0.25, 0.1, 0.25, 1),
+    filter 0.45s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+#shop-atelier .shop-pd__visual.shop-pd__visual--fading {
+  animation: none;
+  opacity: 0;
+  filter: blur(14px) brightness(0.85);
+}
+
+#shop-atelier .shop-pd__visual .shop-pd__media-stack {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #050505;
+  overflow: hidden;
+}
+
+#shop-atelier .shop-pd__visual .shop-pd__media-el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1);
+  transition:
+    opacity 0.65s ease,
+    transform 0.85s var(--shop-ease-out),
+    filter 0.75s ease;
+  will-change: transform, opacity;
+}
+
+#shop-atelier .shop-pd__visual .shop-pd__media-el--bg-blur {
+  object-fit: cover;
+  filter: blur(28px);
+  opacity: 0;
+  transform: scale(1.08);
+  z-index: 0;
+}
+
+#shop-atelier #pd-main-visual.is-media-ready .shop-pd__media-el--bg-blur {
+  opacity: 0.35;
+}
+
+#shop-atelier .shop-pd__visual .shop-pd__media-el--primary {
+  object-fit: contain;
+  object-position: center center;
+  z-index: 1;
+  background: transparent;
+  padding: clamp(0.75rem, 2vw, 1.35rem);
+  box-sizing: border-box;
+}
+
+#shop-atelier #pd-main-visual.is-media-ready .shop-pd__media-el--primary {
+  opacity: 1;
+}
+
+#shop-atelier .shop-pd__visual-wrap:hover .shop-pd__media-el--primary {
+  transform: scale(1.015);
+  filter: brightness(1.03);
+}
+
+#shop-atelier .shop-pd__visual .shop-pd__media-el.shop-pd__media-el--reveal {
+  animation: shopPdMediaReveal 0.95s cubic-bezier(0.22, 0.65, 0.16, 1) both;
+}
+
+#shop-atelier .shop-pd__media-el--video::-webkit-media-controls,
+#shop-atelier .shop-pd__media-el--video::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
+#shop-atelier .shop-pd__media-el--video {
+  appearance: none;
+}
+
+@keyframes shopPdVisualBreathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.008);
+  }
+}
+
+@keyframes shopPdMediaReveal {
+  from {
+    opacity: 0;
+    filter: blur(12px) brightness(0.92);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0) brightness(1);
+  }
+}
+
+#shop-atelier .shop-pd__visual-shine {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: linear-gradient(
+    125deg,
+    rgba(255, 248, 232, 0.14) 0%,
+    transparent 38%,
+    transparent 62%,
+    rgba(255, 248, 232, 0.05) 100%
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.55;
+}
+
+/* —— Glass body / typography —— */
+#shop-atelier .shop-pd__glass-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.15rem, 2.8vh, 1.85rem);
+  padding: clamp(0.35rem, 1vw, 0.65rem) clamp(0.15rem, 0.6vw, 0.35rem) 0.35rem;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  #shop-atelier #shop-view-detail:not([hidden]) .shop-pd__glass-body {
+    position: sticky;
+    top: clamp(4.5rem, 10vh, 5.5rem);
+    align-self: start;
+    max-width: none;
+    width: 100%;
+  }
+}
+
+#shop-atelier .shop-pd__glass-body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  z-index: 0;
+}
+
+#shop-atelier .shop-pd__glass-body > * {
+  position: relative;
+  z-index: 1;
+}
+
+#shop-atelier .shop-pd__kicker {
+  margin: 0;
+  font-family: var(--shop-font-ui);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(210, 180, 95, 0.55);
+}
+
+#shop-atelier .shop-pd__title {
+  margin: 0.55rem 0 0;
+  font-family: var(--shop-pd-font-title);
+  font-weight: 600;
+  font-size: clamp(1.05rem, 1.45vw, 1.38rem);
+  letter-spacing: 0.05em;
+  line-height: 1.28;
+  text-transform: uppercase;
+  color: #f3ebe0;
+  max-width: var(--shop-pd-copy-max);
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+  text-wrap: balance;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+#shop-atelier .shop-pd__micro {
+  margin: 0.1rem 0 0;
+  font-family: var(--shop-font-ui);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+#shop-atelier .shop-pd__desc-block {
+  margin: 0.15rem 0 0;
+}
+
+#shop-atelier .shop-pd__desc {
+  margin: 0;
+  max-width: 40ch;
+  font-family: var(--shop-font-ui);
+  font-size: clamp(0.9rem, 1.05vw, 0.98rem);
+  font-weight: 400;
+  line-height: 1.68;
+  letter-spacing: 0.02em;
+  color: rgba(220, 215, 206, 0.86);
+}
+
+#shop-atelier .shop-pd__desc-more {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--shop-font-ui);
+  font-size: var(--type-micro, 0.68rem);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 210, 170, 0.95);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(210, 180, 95, 0.28);
+  transition:
+    border-color 0.35s ease,
+    color 0.35s ease,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#shop-atelier .shop-pd__desc-more:hover {
+  border-color: rgba(232, 205, 130, 0.5);
+  transform: translateY(-1px);
+}
+
+#shop-atelier .shop-pd__meta {
+  margin-top: 0.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  max-width: var(--shop-pd-copy-max);
+  padding-top: clamp(0.85rem, 2vh, 1.1rem);
+  border-top: 1px solid rgba(255, 248, 232, 0.1);
+}
+
+#shop-atelier .shop-pd__meta-row {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 0.65rem 1rem;
+  align-items: start;
+  max-width: var(--shop-pd-copy-max);
+}
+
+@media (max-width: 520px) {
+  #shop-atelier .shop-pd__meta-row {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+}
+
+#shop-atelier .shop-pd__meta-k {
+  font-family: var(--shop-font-ui);
+  font-size: var(--type-micro, 0.68rem);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.45);
+}
+
+#shop-atelier .shop-pd__meta-v {
+  font-family: var(--shop-font-ui);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: rgba(200, 196, 188, 0.82);
+}
+
+#shop-atelier .shop-pd__stock {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-top: 0.15rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-family: var(--shop-font-ui);
+  font-size: var(--type-micro, 0.68rem);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 220, 188, 0.88);
+  border: 1px solid rgba(210, 180, 95, 0.22);
+  background: rgba(210, 180, 95, 0.06);
+}
+
+#shop-atelier .shop-pd__price-block {
+  margin-top: 0.15rem;
+  padding-top: clamp(0.95rem, 2.2vh, 1.2rem);
+  border-top: 1px solid rgba(255, 248, 232, 0.1);
+}
+
+#shop-atelier .shop-pd__price-h {
+  display: block;
+  font-family: var(--shop-font-ui);
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 0.25rem;
+}
+
+#shop-atelier .shop-pd__price {
+  margin: 0;
+  font-family: var(--shop-font-ui);
+  font-size: clamp(1.15rem, 1.65vw, 1.38rem);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(250, 247, 239, 0.95);
+}
+
+/* —— CTA row —— */
+#shop-atelier .shop-pd__cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+#shop-atelier .shop-pd__qty {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--shop-pd-r-cta) 0 0 var(--shop-pd-r-cta);
+  border: 1px solid rgba(210, 180, 95, 0.22);
+  border-right: none;
+  background: rgba(8, 8, 8, 0.52);
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 232, 0.06),
+    0 6px 20px rgba(0, 0, 0, 0.32);
+  overflow: hidden;
+  min-height: 52px;
+}
+
+#shop-atelier .shop-pd__qty-btn {
+  width: 44px;
+  border: none;
+  background: transparent;
+  color: rgba(245, 240, 232, 0.85);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+#shop-atelier .shop-pd__qty-btn:hover {
+  background: rgba(210, 180, 95, 0.1);
+  color: #fff;
+}
+
+#shop-atelier .shop-pd__qty-input {
+  width: 3.25rem;
+  border: none;
+  border-left: 1px solid rgba(255, 248, 232, 0.08);
+  border-right: 1px solid rgba(255, 248, 232, 0.08);
+  background: transparent;
+  color: #faf7ef;
+  font-family: var(--shop-font-ui);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+#shop-atelier .shop-pd__qty-input::-webkit-outer-spin-button,
+#shop-atelier .shop-pd__qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+#shop-atelier .shop-pd__btn-bc {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: min(220px, 100%);
+  min-height: 52px;
+  padding: 0 1.5rem;
+  font-family: var(--shop-font-ui);
+  font-size: var(--type-micro, 0.68rem);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #0a0908;
+  background: linear-gradient(
+    145deg,
+    rgba(122, 98, 42, 0.95) 0%,
+    #a88628 16%,
+    #c4a030 38%,
+    #d8c878 50%,
+    #b89428 72%,
+    #8a7428 100%
+  );
+  border: 1px solid rgba(255, 248, 232, 0.28);
+  border-left: none;
+  border-radius: 0 var(--shop-pd-r-cta) var(--shop-pd-r-cta) 0;
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  text-shadow: 0 1px 0 rgba(255, 248, 232, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 232, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    inset 0 0 24px rgba(255, 248, 232, 0.06),
+    0 10px 32px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(201, 162, 39, 0.14);
+  transition:
+    transform 0.48s var(--shop-ease-out),
+    box-shadow 0.55s var(--shop-ease),
+    filter 0.45s ease,
+    border-color 0.4s ease;
+}
+
+#shop-atelier .shop-pd__btn-bc-inner {
+  position: relative;
+  z-index: 2;
+}
+
+#shop-atelier .shop-pd__btn-bc::after {
+  content: "";
+  position: absolute;
+  inset: -55%;
+  background: linear-gradient(
+    118deg,
+    transparent 40%,
+    rgba(255, 250, 240, 0.08) 47%,
+    rgba(255, 248, 232, 0.22) 50%,
+    rgba(255, 250, 240, 0.08) 53%,
+    transparent 60%
+  );
+  transform: translateX(-48%) rotate(10deg);
+  opacity: 0;
+  transition:
+    transform 0.85s var(--shop-ease-out),
+    opacity 0.4s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#shop-atelier .shop-pd__btn-bc:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06) saturate(1.05);
+  border-color: rgba(255, 248, 232, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 232, 0.38),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    inset 0 0 32px rgba(255, 248, 232, 0.1),
+    0 18px 48px rgba(0, 0, 0, 0.52),
+    0 0 56px rgba(201, 162, 39, 0.28),
+    0 0 96px rgba(210, 180, 95, 0.12);
+}
+
+#shop-atelier .shop-pd__btn-bc:hover::after {
+  opacity: 1;
+  transform: translateX(42%) rotate(10deg);
+}
+
+#shop-atelier .shop-pd__btn-bc:active {
+  transform: translateY(0);
+}
+
+#shop-atelier .shop-pd__fav {
+  flex: 0 0 52px;
+  width: 52px;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(210, 180, 95, 0.2);
+  background: rgba(8, 8, 8, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(245, 240, 232, 0.65);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, 0.05);
+  transition:
+    border-color 0.35s ease,
+    color 0.35s ease,
+    background 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#shop-atelier .shop-pd__fav:hover {
+  border-color: rgba(210, 180, 95, 0.35);
+  color: rgba(250, 240, 210, 0.95);
+}
+
+#shop-atelier .shop-pd__fav.is-active {
+  border-color: rgba(210, 180, 95, 0.45);
+  color: rgba(232, 200, 120, 0.95);
+  box-shadow: 0 0 24px rgba(210, 180, 95, 0.12);
+}
+
+/* —— Galerie (full-width strip under main PDP row) —— */
+#shop-atelier .shop-pd__galerie,
+#shop-atelier .shop-pd__galerie--under-row {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 0;
+  padding: clamp(1rem, 2.2vw, 1.35rem) clamp(1.1rem, 2.2vw, 1.45rem) clamp(1.05rem, 2vw, 1.35rem);
+  border-top: 1px solid rgba(255, 248, 232, 0.08);
+}
+
+#shop-atelier .shop-pd__galerie-label {
+  margin: 0 0 clamp(0.85rem, 1.8vh, 1.1rem);
+  font-family: var(--shop-font-ui);
+  font-size: 0.48rem;
+  font-weight: 600;
+  letter-spacing: 0.48em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.36);
+}
+
+#shop-atelier .shop-pd__galerie-strip-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.35rem;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+#shop-atelier .shop-pd__galerie-strip {
+  display: flex;
+  flex-direction: row;
+  gap: 18px;
+  align-items: stretch;
+  min-height: 0;
+  width: max-content;
+  padding: 4px 2px 6px;
+}
+
+#shop-atelier .shop-pd-strip__btn {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(120px, 11vw, 180px);
+  height: clamp(120px, 11vw, 180px);
+  padding: 0;
+  border: 2px solid rgba(255, 248, 232, 0.08);
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #0c0c0c;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(255, 248, 232, 0.04);
+  transition:
+    box-shadow 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.45s ease,
+    filter 0.45s ease;
+}
+
+#shop-atelier .shop-pd-strip__btn:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.5),
+    0 0 32px rgba(201, 162, 39, 0.14),
+    inset 0 0 0 1px rgba(255, 248, 232, 0.08);
+  filter: brightness(1.04);
+}
+
+#shop-atelier .shop-pd-strip__btn.is-active {
+  border-color: rgba(210, 180, 95, 0.92);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.48),
+    0 0 28px rgba(201, 162, 39, 0.22),
+    inset 0 0 0 1px rgba(210, 180, 95, 0.28);
+}
+
+#shop-atelier .shop-pd-strip__btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: filter 0.55s ease;
+}
+
+/* —— Listing → detail enter —— */
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__hero-back-scale {
+  animation: shopPdBackdropIn 1.05s cubic-bezier(0.22, 0.65, 0.16, 1) 0.05s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__glass {
+  animation: shopPdGlassIn 0.95s cubic-bezier(0.22, 0.65, 0.16, 1) 0.12s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__frame {
+  animation: shopPdMediaFrameIn 0.9s cubic-bezier(0.22, 0.65, 0.16, 1) 0.18s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__kicker {
+  animation: shopPdStaggerItem 0.65s cubic-bezier(0.22, 0.65, 0.16, 1) 0.22s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__title {
+  animation: shopPdStaggerItem 0.7s cubic-bezier(0.22, 0.65, 0.16, 1) 0.28s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__micro {
+  animation: shopPdStaggerItem 0.65s cubic-bezier(0.22, 0.65, 0.16, 1) 0.32s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__desc-block {
+  animation: shopPdStaggerItem 0.65s cubic-bezier(0.22, 0.65, 0.16, 1) 0.36s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__meta {
+  animation: shopPdStaggerItem 0.65s cubic-bezier(0.22, 0.65, 0.16, 1) 0.4s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__stock {
+  animation: shopPdStaggerItem 0.65s cubic-bezier(0.22, 0.65, 0.16, 1) 0.44s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__price-block {
+  animation: shopPdStaggerItem 0.65s cubic-bezier(0.22, 0.65, 0.16, 1) 0.48s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__cta-row {
+  animation: shopPdStaggerItem 0.65s cubic-bezier(0.22, 0.65, 0.16, 1) 0.52s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__galerie {
+  animation: shopPdStaggerItem 0.7s cubic-bezier(0.22, 0.65, 0.16, 1) 0.56s both;
+}
+
+#shop-atelier #shop-view-detail.shop-detail-enter .shop-pd-strip__btn {
+  animation: shopPdThumbReveal 0.52s cubic-bezier(0.22, 1, 0.36, 1) 0.58s both;
+}
+
+#shop-atelier.shop-route-to-detail #shop-view-list {
+  pointer-events: none;
+  animation: shopRouteListOut 0.4s cubic-bezier(0.55, 0.06, 0.2, 1) forwards;
+}
+
+@keyframes shopRouteListOut {
+  to {
+    opacity: 0;
+    transform: scale(0.982) translateY(10px);
+    filter: blur(12px);
+  }
+}
+
+@keyframes shopPdBackdropIn {
+  from {
+    transform: scale(1.12);
+    filter: blur(36px) saturate(1);
+  }
+  to {
+    transform: scale(1.06);
+    filter: blur(28px) saturate(1.12);
+  }
+}
+
+@keyframes shopPdGlassIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.985);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes shopPdMediaFrameIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shopPdStaggerItem {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shopPdThumbReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #shop-atelier .shop-pd-mote {
+    animation: none;
+    opacity: 0.05;
+  }
+
+  #shop-atelier .shop-pd__hero-radial {
+    animation: none;
+    opacity: 0.22;
+  }
+
+  #shop-atelier .shop-pd__visual-inner {
+    transform: none !important;
+    transition: none;
+  }
+
+  #shop-atelier .shop-pd__visual {
+    animation: none;
+  }
+
+  #shop-atelier .shop-pd__visual.shop-pd__visual--fading {
+    opacity: 1;
+    filter: none;
+  }
+
+  #shop-atelier .shop-pd__visual .shop-pd__media-el.shop-pd__media-el--reveal {
+    animation: none;
+  }
+
+  #shop-atelier .shop-pd__visual .shop-pd__media-el {
+    opacity: 1;
+  }
+
+  #shop-atelier #pd-main-visual.is-media-ready .shop-pd__media-el--bg-blur {
+    opacity: 0.28;
+  }
+
+  #shop-atelier #pd-hero-backdrop-wrap {
+    transition: none;
+    opacity: 1;
+  }
+
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__hero-back-scale,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__glass,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__frame,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__kicker,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__title,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__micro,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__desc-block,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__meta,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__stock,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__price-block,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__cta-row,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd__galerie,
+  #shop-atelier #shop-view-detail.shop-detail-enter .shop-pd-strip__btn {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  #shop-atelier.shop-route-to-detail #shop-view-list {
+    animation: none;
+  }
+}
+
+/* Mono PDP — BarberClub-style split (scoped; override loads last for tokens) */
+body.theme-mono #shop-atelier.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@media (min-width: 900px) {
+  body.theme-mono #shop-atelier.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-grid {
+    grid-template-columns: minmax(0, 60fr) minmax(0, 40fr) !important;
+    min-height: min(calc(100dvh - 132px), 760px) !important;
+  }
+}
+
+body.theme-mono #shop-atelier .shop-pd-strip__btn {
+  width: clamp(112px, 14vw, 168px) !important;
+  height: clamp(132px, 16vw, 196px) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+}
+
+body.theme-mono #shop-atelier .shop-pd-strip__btn.is-active {
+  border-color: #fff !important;
+  box-shadow: 0 0 0 1px #fff !important;
+}
+
+body.theme-mono #shop-atelier .shop-pd-strip__btn:hover {
+  filter: none !important;
+  border-color: rgba(255, 255, 255, 0.45) !important;
+}
+
+/* —— PDP split layout (restored; gold default) —— */
+#shop-atelier.is-open .shop-pd.shop-pdp {
+  background: radial-gradient(ellipse 120% 80% at 50% 0%, #12100a 0%, #050505 52%, #020202 100%) !important;
+  background-image: none !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-back,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-back-scale,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-back-inner,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-gold,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-radial {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) {
+  overflow: visible !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) #pd-root {
+  min-height: 0 !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-stage {
+  min-height: 0 !important;
+  height: auto !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass,
+#shop-atelier.is-open.shop-page--product .product-detail-shell {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+@media (min-width: 900px) {
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass {
+    display: block !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-grid {
+    display: grid !important;
+    position: relative !important;
+    grid-template-columns: var(--shop-pd-split-media) minmax(0, 1fr) !important;
+    align-items: start !important;
+    column-gap: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    isolation: isolate !important;
+  }
+
+  /* Gold ambient glow + architectural divider at split seam */
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-grid::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: var(--shop-pd-split-media) !important;
+    width: clamp(10px, 1.2vw, 22px) !important;
+    transform: translateX(-50%) !important;
+    pointer-events: none !important;
+    z-index: 4 !important;
+    background: radial-gradient(
+      ellipse 45% 100% at 50% 50%,
+      rgba(201, 162, 39, 0.06) 0%,
+      transparent 72%
+    ) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-grid::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: var(--shop-pd-split-media) !important;
+    width: 1px !important;
+    transform: translateX(-0.5px) !important;
+    pointer-events: none !important;
+    z-index: 5 !important;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(210, 180, 95, 0.06) 14%,
+      rgba(232, 205, 140, 0.22) 50%,
+      rgba(210, 180, 95, 0.06) 86%,
+      transparent 100%
+    ) !important;
+    box-shadow: 0 0 1px rgba(255, 248, 232, 0.08) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__mediaWrap,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media {
+    position: sticky !important;
+    top: 0 !important;
+    left: auto !important;
+    width: var(--shop-pd-split-media) !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: none !important;
+    align-self: start !important;
+    z-index: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    overflow: hidden !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 2 !important;
+    pointer-events: none !important;
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, 0.62) 0%, transparent 14%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.48) 0%, transparent 16%, transparent 84%, rgba(0, 0, 0, 0.55) 100%),
+      linear-gradient(90deg, transparent 88%, rgba(201, 162, 39, 0.04) 96%, transparent 100%) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 3 !important;
+    pointer-events: none !important;
+    box-shadow:
+      inset -18px 0 28px rgba(0, 0, 0, 0.45),
+      inset 0 0 100px 28px rgba(0, 0, 0, 0.28) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-stage {
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    min-height: 100dvh !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-back,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-vignette,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-radial {
+    display: none !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-body {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin-right: 0 !important;
+    grid-column: 2 !important;
+    box-sizing: border-box !important;
+    min-height: 100dvh !important;
+    padding: clamp(8vh, 10vh, 11vh) clamp(2.25rem, 4.5vw, 4rem) clamp(2.5rem, 5vh, 4rem)
+      clamp(2.75rem, 4vw, 4.25rem) !important;
+    background:
+      radial-gradient(ellipse 120% 80% at 0% 40%, rgba(201, 162, 39, 0.06) 0%, transparent 55%),
+      linear-gradient(180deg, #080706 0%, #050403 48%, #030201 100%) !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    position: relative !important;
+    top: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: clamp(1.5rem, 3.5vh, 2.25rem) !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-body::before,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-body::after {
+    display: none !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-body .shop-pd__galerie--in-body {
+    width: 100% !important;
+    max-width: none !important;
+    margin: clamp(1.35rem, 3vh, 2.1rem) 0 0 !important;
+    padding: clamp(1.25rem, 3vh, 1.65rem) 0 0 !important;
+    border-top: 1px solid rgba(210, 180, 95, 0.14) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__mediaWrap .shop-pd__frame,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__mediaWrap .shop-pd__visual-wrap,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__mediaWrap .shop-pd__visual-inner,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__mediaWrap .shop-pd__visual {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__mediaWrap img,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__mediaWrap video,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__mediaWrap .shop-pd__media-el--primary {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center 42% !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media {
+    background:
+      radial-gradient(ellipse 68% 55% at 42% 40%, rgba(210, 180, 95, 0.12) 0%, transparent 58%),
+      linear-gradient(180deg, #0a0908 0%, #050403 52%, #020201 100%) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__ambient {
+    width: var(--shop-pd-split-media) !important;
+    right: auto !important;
+    opacity: 1 !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-body > * {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__title {
+    margin-top: 0.65rem !important;
+    font-size: clamp(1.12rem, 1.55vw, 1.52rem) !important;
+    line-height: 1.22 !important;
+    letter-spacing: 0.04em !important;
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+    text-wrap: pretty !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__desc,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__desc-block {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__desc {
+    line-height: 1.68 !important;
+    font-family: var(--shop-font-ui) !important;
+    max-width: min(62ch, 100%) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__meta,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__price-block {
+    max-width: 100% !important;
+    padding-top: clamp(1.1rem, 2.6vh, 1.45rem) !important;
+    margin-top: clamp(0.35rem, 1vh, 0.65rem) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__cta-row {
+    margin-top: clamp(0.5rem, 1.2vh, 0.85rem) !important;
+    gap: clamp(0.9rem, 1.9vw, 1.2rem) !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__galerie-strip-wrap,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__galerie-mosaic {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__galerie-mosaic {
+    min-height: clamp(320px, 38vh, 480px) !important;
+  }
+}
+
+@media (max-width: 899.98px) {
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__hero-stage {
+    padding: clamp(3.75rem, 7vh, 4.25rem) clamp(0.75rem, 2vw, 1.25rem) clamp(1.5rem, 3vh, 2rem) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+    padding: 0 clamp(0.75rem, 2vw, 1.25rem) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media {
+    position: relative !important;
+    width: 100% !important;
+    height: min(72vh, 560px) !important;
+    min-height: min(52vh, 420px) !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media .shop-pd__media-el--primary,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media img,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media video {
+    object-fit: cover !important;
+    object-position: center 40% !important;
+    padding: 0 !important;
+  }
+
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-body,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__galerie,
+  #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__galerie--under-row {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__frame,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media .shop-pd__media-stack,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .product-detail-media {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: #050403 !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__frame {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 100% !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__frame::before,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__frame::after {
+  display: none !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual-wrap {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  border-radius: 0 !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual-inner {
+  inset: 0 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual {
+  animation: none !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual.shop-pd__visual--fading {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual .shop-pd__media-el--primary,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) #pd-main-visual .shop-pd__media-el--primary {
+  object-fit: cover !important;
+  object-position: center 42% !important;
+  transform: none !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual .shop-pd__media-el {
+  object-fit: cover !important;
+  object-position: center 42% !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: clamp(1.35rem, 3.2vh, 2.1rem) !important;
+  max-height: none !important;
+  overflow: visible !important;
+  position: relative !important;
+  top: auto !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual .shop-pd__media-el--bg-blur,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual-shine {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media img,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-media video,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual .shop-pd__media-el,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual .shop-pd__media-el--primary,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) #pd-main-visual img,
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) #pd-main-visual video {
+  filter: none !important;
+  transform: none !important;
+  background: #050403 !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__visual-wrap:hover .shop-pd__media-el--primary {
+  filter: none !important;
+  transform: none !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__galerie--in-body {
+  margin-left: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+#shop-atelier.is-open .shop-pd__galerie-strip-wrap {
+  overflow: visible !important;
+}
+
+#shop-atelier.is-open .shop-pd__galerie-mosaic {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.28fr) minmax(0, 0.92fr) !important;
+  grid-template-rows: minmax(0, 0.92fr) minmax(0, 1.08fr) !important;
+  gap: clamp(14px, 1.65vw, 22px) !important;
+  width: 100% !important;
+  min-height: clamp(300px, 36vh, 460px) !important;
+  align-items: stretch !important;
+}
+
+#shop-atelier.is-open .shop-pd__galerie-mosaic--count-1 {
+  grid-template-columns: 1fr !important;
+  grid-template-rows: minmax(280px, 38vh) !important;
+}
+
+#shop-atelier.is-open .shop-pd__galerie-mosaic--count-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: minmax(220px, 28vh) !important;
+}
+
+#shop-atelier.is-open .shop-pd__galerie-mosaic--count-1 .shop-pd-mosaic__cell--hero,
+#shop-atelier.is-open .shop-pd__galerie-mosaic--count-2 .shop-pd-mosaic__cell {
+  grid-column: auto !important;
+  grid-row: auto !important;
+}
+
+#shop-atelier.is-open .shop-pd-mosaic__cell--hero {
+  grid-column: 1 !important;
+  grid-row: 1 / span 2 !important;
+  min-height: clamp(280px, 34vh, 400px) !important;
+}
+
+#shop-atelier.is-open .shop-pd-mosaic__cell--stack-a {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+}
+
+#shop-atelier.is-open .shop-pd-mosaic__cell--stack-b {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+}
+
+#shop-atelier.is-open .shop-pd-mosaic__cell--extra {
+  grid-column: 1 / -1 !important;
+  grid-row: auto !important;
+  min-height: clamp(160px, 20vh, 240px) !important;
+}
+
+#shop-atelier.is-open .shop-pd-mosaic__cell,
+#shop-atelier.is-open .shop-pd-strip__btn.shop-pd-mosaic__cell {
+  flex: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: clamp(132px, 16vh, 188px) !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border-radius: var(--shop-pd-r-mosaic) !important;
+  border: 1px solid rgba(210, 180, 95, 0.2) !important;
+  background: #0a0908 !important;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(255, 248, 232, 0.04) !important;
+  overflow: hidden !important;
+  aspect-ratio: auto !important;
+  transition:
+    border-color 0.45s ease,
+    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+#shop-atelier.is-open .shop-pd-mosaic__cell img,
+#shop-atelier.is-open .shop-pd-strip__btn.shop-pd-mosaic__cell img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  filter: none !important;
+}
+
+#shop-atelier.is-open .shop-pd-mosaic__cell:hover,
+#shop-atelier.is-open .shop-pd-strip__btn.shop-pd-mosaic__cell:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(201, 162, 39, 0.42) !important;
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.48),
+    0 0 28px rgba(201, 162, 39, 0.14),
+    inset 0 0 0 1px rgba(255, 248, 232, 0.06) !important;
+  filter: brightness(1.03) !important;
+}
+
+#shop-atelier.is-open .shop-pd-mosaic__cell.is-active,
+#shop-atelier.is-open .shop-pd-strip__btn.shop-pd-mosaic__cell.is-active {
+  border-color: rgba(201, 162, 39, 0.92) !important;
+  box-shadow:
+    0 0 0 1px rgba(201, 162, 39, 0.55),
+    0 0 28px rgba(201, 162, 39, 0.18) !important;
+}
+
+#shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__galerie--in-body {
+  border-top-color: rgba(210, 180, 95, 0.14) !important;
+}
+
+/* —— PDP editorial refinement (split + glass; loads before gold theme) —— */
+#shop-atelier.is-open.shop-page--product .shop-pd__kicker {
+  letter-spacing: 0.38em;
+  color: rgba(210, 180, 95, 0.48);
+  margin-bottom: 0.15rem;
+}
+
+#shop-atelier.is-open.shop-page--product .shop-pd__title {
+  margin-top: 0.85rem;
+  margin-bottom: 0.15rem;
+}
+
+#shop-atelier.is-open.shop-page--product .shop-pd__micro {
+  letter-spacing: 0.28em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+#shop-atelier.is-open.shop-page--product .shop-pd__galerie-label {
+  margin-bottom: clamp(0.95rem, 2vh, 1.25rem);
+  letter-spacing: 0.44em;
+}
+
+#shop-atelier.is-open.shop-page--product .shop-pd__galerie--in-body {
+  margin-top: clamp(1.15rem, 2.8vh, 1.85rem) !important;
+  padding-top: clamp(1.15rem, 2.8vh, 1.5rem) !important;
+}
+
+#shop-atelier.is-open.shop-page--product .shop-pd-mote {
+  opacity: 0.18;
+}
+
+#shop-atelier.is-open.shop-page--product .shop-pd__fav {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(8, 8, 8, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, 0.05);
+  transition:
+    border-color 0.4s ease,
+    color 0.4s ease,
+    background 0.4s ease,
+    box-shadow 0.45s ease,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#shop-atelier.is-open.shop-page--product .shop-pd__fav:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 232, 0.08),
+    0 0 28px rgba(210, 180, 95, 0.14);
+}
+
+@media (max-width: 899.98px) {
+  #shop-atelier.is-open.shop-page--product .shop-pd__qty {
+    border-radius: var(--shop-pd-r-cta);
+    border-right: 1px solid rgba(210, 180, 95, 0.22);
+  }
+
+  #shop-atelier.is-open.shop-page--product .shop-pd__btn-bc {
+    border-radius: var(--shop-pd-r-cta);
+    border-left: 1px solid rgba(255, 248, 232, 0.28);
+    flex: 1 1 100%;
+  }
+}

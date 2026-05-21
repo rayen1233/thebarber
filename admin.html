@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="./barber-theme-boot.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Administration — The Barber</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./shop-theme.css?v=20260515-73" />
+    <link rel="stylesheet" href="./admin-dashboard.css?v=20260515-73" />
+    <link rel="stylesheet" href="./barber-typography.css?v=20260515-73" />
+    <link rel="stylesheet" href="./barber-theme-gold.css?v=20260519-2" />
+  </head>
+  <body class="admin-body">
+    <div class="admin-app">
+      <aside class="admin-sidebar" aria-label="Navigation administration">
+        <header>
+          <p class="admin-sidebar__brand">The Barber</p>
+          <h1 class="admin-sidebar__title">Atelier</h1>
+        </header>
+        <nav class="admin-nav" role="tablist" aria-label="Sections">
+          <button type="button" class="admin-nav__btn is-active" data-admin-nav="products" role="tab" aria-selected="true">
+            Produits
+          </button>
+          <button type="button" class="admin-nav__btn" data-admin-nav="orders" role="tab" aria-selected="false">
+            Commandes
+          </button>
+          <button type="button" class="admin-nav__btn" data-admin-nav="accounts" role="tab" aria-selected="false">
+            Comptes
+          </button>
+        </nav>
+        <div class="admin-sidebar__links">
+          <a href="./intro.html">Accueil</a>
+          <a href="./intro.html#shop/tondeuse">Boutique</a>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <div class="admin-wrap-inner">
+          <section class="admin-section is-active" data-admin-section="products" id="admin-section-products" role="tabpanel">
+            <p class="shop-eyebrow" style="margin: 0 0 0.5rem">Catalogue</p>
+            <h1>Produits</h1>
+            <p class="lede">
+              Les produits enregistrés ici apparaissent sur la boutique. Pour de grandes vidéos ou de nombreuses images,
+              privilégiez des liens vers des fichiers déjà en ligne ou des chemins vers votre dossier <code>public/</code>.
+            </p>
+
+            <div class="admin-card">
+              <h2 id="admin-form-title">Nouveau produit</h2>
+              <form id="admin-form">
+                <input type="hidden" id="admin-product-id" name="id" value="" />
+                <label for="f-name">Nom</label>
+                <input class="admin-inp" id="f-name" name="name" required autocomplete="off" />
+
+                <label for="f-cat">Catégorie</label>
+                <select id="f-cat" name="category" required>
+                  <option value="" selected>— Choisir —</option>
+                  <option value="Tondeuse">Tondeuse</option>
+                  <option value="Ciseaux et peignes">Ciseaux et peignes</option>
+                  <option value="Accessoires">Accessoires</option>
+                </select>
+
+                <label for="f-desc">Description</label>
+                <textarea id="f-desc" name="description" rows="5" required></textarea>
+
+                <label for="f-price">Prix (TND)</label>
+                <input class="admin-inp" id="f-price" name="priceTnd" type="number" min="0" step="0.001" required />
+
+                <label for="admin-video-url">Vidéo (URL, chemin, ou fichier ci-dessous)</label>
+                <input
+                  class="admin-inp"
+                  id="admin-video-url"
+                  name="videoUrl"
+                  type="text"
+                  placeholder="https://… ou public/video.mp4"
+                />
+                <input type="file" id="admin-video-file" accept="video/*" style="margin-top: 0.5rem" />
+
+                <label>Photos (minimum 3)</label>
+                <p style="margin: 0 0 0.5rem; font-size: 0.78rem; color: var(--shop-muted); line-height: 1.45">
+                  Importez des fichiers (conversion automatique) ou indiquez une adresse / un chemin d’image pour chaque ligne.
+                </p>
+                <div class="admin-row-actions" style="margin-bottom: 0.75rem">
+                  <button type="button" class="shop-btn-ghost" id="admin-photos-bulk-btn">Importer plusieurs images</button>
+                  <input type="file" id="admin-photos-bulk" accept="image/*" multiple hidden />
+                  <button type="button" class="shop-btn-ghost" id="admin-add-photo">+ Une ligne photo</button>
+                </div>
+                <div id="admin-photos"></div>
+                <p id="admin-status" aria-live="polite"></p>
+
+                <div class="admin-row-actions">
+                  <button type="submit" class="shop-btn-primary">Enregistrer le produit</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="admin-card">
+              <h2>Catalogue actuel</h2>
+              <div class="admin-row-actions" style="margin-bottom: 1rem">
+                <button type="button" class="shop-btn-ghost" id="admin-export">Exporter JSON</button>
+                <button type="button" class="shop-btn-ghost" id="admin-import">Importer JSON</button>
+                <input type="file" id="admin-import-file" accept="application/json" hidden />
+                <button type="button" class="shop-btn-ghost" id="admin-clear-all" style="border-color: rgba(200, 100, 80, 0.45); color: #d8a090">
+                  Tout effacer
+                </button>
+              </div>
+              <div class="admin-table-wrap">
+                <table class="admin-table">
+                  <thead>
+                    <tr
+                      style="
+                        text-align: left;
+                        font-size: 0.65rem;
+                        letter-spacing: 0.18em;
+                        text-transform: uppercase;
+                        color: var(--shop-muted);
+                      "
+                    >
+                      <th style="padding: 0.5rem 0.85rem">Nom</th>
+                      <th style="padding: 0.5rem 0.85rem">Catégorie</th>
+                      <th style="padding: 0.5rem 0.85rem">Prix</th>
+                      <th style="padding: 0.5rem 0.85rem">Vidéo</th>
+                      <th style="padding: 0.5rem 0.85rem">Lien</th>
+                      <th style="padding: 0.5rem 0.85rem"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-section" data-admin-section="orders" id="admin-section-orders" role="tabpanel">
+            <p class="shop-eyebrow" style="margin: 0 0 0.5rem">Logistique</p>
+            <h1>Commandes</h1>
+            <p class="lede">
+              Toutes les commandes passées depuis la boutique (stockage local du navigateur). Mettez à jour les statuts
+              ou supprimez une entrée pour l’annuler.
+            </p>
+            <div class="admin-card" style="margin-bottom: 0">
+              <h2>Liste des commandes</h2>
+              <div id="admin-orders-root"></div>
+            </div>
+          </section>
+
+          <section class="admin-section" data-admin-section="accounts" id="admin-section-accounts" role="tabpanel">
+            <p class="shop-eyebrow" style="margin: 0 0 0.5rem">Clients</p>
+            <h1>Comptes</h1>
+            <p class="lede">
+              Comptes enregistrés sur ce navigateur. La remise spéciale s’applique automatiquement au panier et au
+              paiement.
+            </p>
+            <div class="admin-card" style="margin-bottom: 0">
+              <h2>Utilisateurs</h2>
+              <div id="admin-accounts-root"></div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="./barber-theme.mjs"></script>
+    <script type="module" src="./shop-bootstrap.mjs?v=20260522-vercel"></script>
+    <script type="module" src="./admin.mjs?v=20260522-vercel"></script>
+  </body>
+</html>

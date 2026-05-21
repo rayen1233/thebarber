@@ -1,0 +1,667 @@
+/**
+ * The Barber — black / gold luxury (default).
+ * Replaces mono override layers: shop layout fixes + gold accents.
+ */
+
+:root,
+html.theme-gold {
+  --ink: #050403;
+  --panel: #0e0c0a;
+  --muted: #9a9284;
+  --gold: #c9a227;
+  --gold-soft: #e8d9b4;
+  --gold-dim: rgba(201, 162, 39, 0.42);
+  --gold-near: rgba(212, 185, 120, 0.78);
+  --gold-border: rgba(201, 162, 39, 0.52);
+  --gold-glow: rgba(212, 185, 120, 0.38);
+  --mono-content-max: min(1180px, 96vw);
+}
+
+html.theme-gold body {
+  color: #f0ebe0;
+}
+
+/* —— Typography: Orbitron display (restored from mono polish) —— */
+html.theme-gold {
+  --font-display: "Orbitron", sans-serif;
+  --shop-font-display: "Orbitron", sans-serif;
+  --type-display-tracking: 0.16em;
+  --type-display-weight: 700;
+}
+
+html.theme-gold .showroom-panel__title,
+html.theme-gold #order-showroom .showroom-panel__title,
+html.theme-gold #shop-atelier.is-open .shop-cat__title,
+html.theme-gold .shop-cart-page__title,
+html.theme-gold .shop-auth-brand-title,
+html.theme-gold .mch-hero-title,
+html.theme-gold h1,
+html.theme-gold h2,
+html.theme-gold .hero-title,
+html.theme-gold .section-title,
+html.theme-gold .shop-title {
+  font-family: var(--font-display) !important;
+  font-weight: var(--type-display-weight, 700) !important;
+  letter-spacing: var(--type-display-tracking, 0.16em) !important;
+  line-height: 0.92 !important;
+}
+
+html.theme-gold .showroom-panel__title,
+html.theme-gold #order-showroom .showroom-panel__title {
+  font-size: clamp(2.6rem, 4.4vw, 4.85rem) !important;
+  text-transform: uppercase !important;
+  color: #f3ebe0 !important;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.theme-gold
+  #order-showroom
+  .showroom-split__panels
+  > .showroom-panel:nth-child(2)
+  .showroom-panel__title {
+  font-size: clamp(2.15rem, 3.9vw, 4rem) !important;
+}
+
+html.theme-gold #shop-atelier.is-open .shop-cat__title {
+  font-size: clamp(2rem, 4.2vw, 3.25rem) !important;
+  text-transform: uppercase !important;
+}
+
+/* PDP title — compact display (readable long names) */
+html.theme-gold #shop-atelier .shop-pd__title,
+html.theme-gold #shop-atelier.shop-page--product .shop-pd__title {
+  font-family: var(--font-display) !important;
+  font-weight: 600 !important;
+  font-size: clamp(1.05rem, 1.45vw, 1.38rem) !important;
+  letter-spacing: 0.05em !important;
+  line-height: 1.28 !important;
+  text-transform: uppercase !important;
+  color: #f3ebe0 !important;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4) !important;
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
+  text-wrap: pretty !important;
+  hyphens: auto !important;
+}
+
+html.theme-gold #shop-atelier .shop-pd__desc,
+html.theme-gold #shop-atelier.shop-page--product .shop-pd__desc {
+  font-family: var(--font-ui, "Inter", sans-serif) !important;
+  font-style: normal !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* PDP split — softer seam glow, more copy breathing room */
+@media (min-width: 900px) {
+  html.theme-gold #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-grid::before {
+    width: clamp(10px, 1.2vw, 22px) !important;
+    background: radial-gradient(
+      ellipse 45% 100% at 50% 50%,
+      rgba(201, 162, 39, 0.05) 0%,
+      transparent 72%
+    ) !important;
+  }
+
+  html.theme-gold #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-grid::after {
+    box-shadow: 0 0 1px rgba(255, 248, 232, 0.08) !important;
+  }
+
+  html.theme-gold #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__glass-body {
+    max-width: none !important;
+    padding-top: clamp(8vh, 10vh, 11vh) !important;
+    padding-right: clamp(2.25rem, 4.5vw, 4rem) !important;
+    padding-left: clamp(2.75rem, 4vw, 4.25rem) !important;
+    gap: clamp(1.5rem, 3.5vh, 2.25rem) !important;
+  }
+
+  html.theme-gold #shop-atelier.is-open.shop-page--product #shop-view-detail:not([hidden]) .shop-pd__kicker {
+    margin-bottom: 0.35rem !important;
+  }
+}
+
+/* —— Order confirmed — readable title + gold card (mono override v91) —— */
+html.theme-gold #shop-atelier.is-open #shop-view-order-done:not([hidden]),
+html.theme-gold #shop-view-order-done:not([hidden]) {
+  display: block !important;
+  position: relative !important;
+  z-index: 3 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  min-height: min(100dvh, 960px) !important;
+  width: 100% !important;
+  pointer-events: auto !important;
+}
+
+html.theme-gold #shop-atelier.is-open #shop-view-order-done:not([hidden]) .shop-order-done-page,
+html.theme-gold #shop-atelier.is-open #shop-view-order-done:not([hidden]) .shop-order-done-page__inner,
+html.theme-gold #shop-view-order-done:not([hidden]) .shop-order-done {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+html.theme-gold #shop-view-order-done:not([hidden]) .shop-anim-fade-up {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+html.theme-gold .shop-order-done-page {
+  max-width: var(--mono-content-max) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+html.theme-gold .shop-order-done .shop-auth__h1,
+html.theme-gold #shop-view-order-done .shop-auth__h1 {
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  font-size: clamp(1.45rem, 3.2vw, 2.15rem) !important;
+  letter-spacing: 0.06em !important;
+  line-height: 1.12 !important;
+  text-transform: uppercase !important;
+  margin: 0.45rem auto 0.85rem !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  hyphens: auto !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  background: linear-gradient(
+    165deg,
+    #f5ecd8 0%,
+    #e8d9b4 32%,
+    #c9a227 68%,
+    #9a7a28 100%
+  ) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
+
+html.theme-gold .shop-order-done .shop-auth__eyebrow {
+  color: var(--gold) !important;
+  letter-spacing: 0.22em !important;
+  opacity: 1 !important;
+}
+
+html.theme-gold .shop-order-done .shop-auth__lede,
+html.theme-gold .shop-order-done .shop-order-done__num {
+  color: rgba(232, 217, 180, 0.82) !important;
+}
+
+html.theme-gold .shop-order-done .shop-order-done__num strong {
+  color: var(--gold-soft) !important;
+  font-weight: 600 !important;
+}
+
+html.theme-gold .shop-order-done.glass-card,
+html.theme-gold .shop-order-done .glass-card {
+  border-color: var(--gold-border) !important;
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.55),
+    0 0 48px var(--gold-glow),
+    inset 0 1px 0 rgba(255, 248, 232, 0.06) !important;
+}
+
+html.theme-gold .showroom-panel__cta,
+html.theme-gold .order-hero__cta,
+html.theme-gold .showroom-close,
+html.theme-gold .shop-btn-primary,
+html.theme-gold .shop-btn-ghost {
+  font-family: var(--font-ui, "Inter", sans-serif) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+
+/* —— Showroom 2×2 — stable photos (no scale tear during grid morph) —— */
+html.theme-gold #order-showroom {
+  background: #050403 !important;
+}
+
+html.theme-gold #order-showroom.order-showroom,
+html.theme-gold #order-showroom.order-showroom.is-open,
+html.theme-gold #order-showroom .showroom-split__panels {
+  transition:
+    opacity 0.72s cubic-bezier(0.19, 1, 0.22, 1),
+    visibility 0s linear,
+    --split-vx 800ms cubic-bezier(0.19, 1, 0.22, 1),
+    --split-hy 800ms cubic-bezier(0.19, 1, 0.22, 1) !important;
+}
+
+html.theme-gold #order-showroom .showroom-panel {
+  transform: none !important;
+}
+
+html.theme-gold #order-showroom .showroom-panel__img,
+html.theme-gold #order-showroom .showroom-panel__video,
+html.theme-gold .showroom-panel__img,
+html.theme-gold .showroom-panel__video {
+  transform: none !important;
+  will-change: auto !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+  opacity: 1 !important;
+  filter: brightness(0.58) contrast(1.08) saturate(0.96) !important;
+  transition: filter 650ms ease, opacity 650ms ease !important;
+}
+
+html.theme-gold #order-showroom .showroom-panel__img.is-loaded,
+html.theme-gold #order-showroom .showroom-panel__video.is-loaded,
+html.theme-gold .showroom-panel__img.is-loaded,
+html.theme-gold .showroom-panel__video.is-loaded {
+  opacity: 1 !important;
+}
+
+html.theme-gold #order-showroom .showroom-panel__img:not(.is-loaded):not([hidden]),
+html.theme-gold #order-showroom .showroom-panel__video:not(.is-loaded):not([hidden]),
+html.theme-gold .showroom-panel__img:not(.is-loaded):not([hidden]),
+html.theme-gold .showroom-panel__video:not(.is-loaded):not([hidden]) {
+  opacity: 0 !important;
+}
+
+html.theme-gold #order-showroom .showroom-panel:hover .showroom-panel__img,
+html.theme-gold #order-showroom .showroom-panel:hover .showroom-panel__video,
+html.theme-gold .showroom-panel:hover .showroom-panel__img,
+html.theme-gold .showroom-panel:hover .showroom-panel__video {
+  transform: none !important;
+  filter: brightness(0.82) contrast(1.06) saturate(1.05) !important;
+}
+
+html.theme-gold
+  #order-showroom
+  .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__img,
+html.theme-gold
+  #order-showroom
+  .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__video,
+html.theme-gold
+  .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__img,
+html.theme-gold
+  .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__video {
+  transform: none !important;
+  opacity: 0.9 !important;
+  filter: brightness(0.46) contrast(1.08) saturate(0.9) !important;
+}
+
+html.theme-gold #order-showroom .showroom-panel__bottom {
+  padding: clamp(32px, 5vw, 72px) !important;
+  width: min(48%, 16rem) !important;
+}
+
+html.theme-gold #order-showroom .showroom-panel__cine,
+html.theme-gold #order-showroom .showroom-panel__shade {
+  background: linear-gradient(
+    to top,
+    rgba(5, 4, 2, 0.55) 0%,
+    transparent 58%
+  ) !important;
+  opacity: 0.38 !important;
+  mix-blend-mode: normal !important;
+}
+
+html.theme-gold #order-showroom .showroom-panel:hover .showroom-panel__cine,
+html.theme-gold #order-showroom .showroom-panel:hover .showroom-panel__shade {
+  opacity: 0.24 !important;
+}
+
+/* Sweep/light layers caused GPU flicker during split — keep off */
+html.theme-gold #order-showroom .showroom-panel__bloom,
+html.theme-gold #order-showroom .showroom-panel__light,
+html.theme-gold #order-showroom .showroom-panel__sweep {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  animation: none !important;
+}
+
+html.theme-gold #order-showroom .showroom-panel__cta {
+  min-height: 44px !important;
+  height: 44px !important;
+  padding: 0 1.75rem !important;
+  background: rgba(0, 0, 0, 0.42) !important;
+  color: var(--gold-soft) !important;
+  border: 1px solid var(--gold-border) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 0 18px var(--gold-glow) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+html.theme-gold #order-showroom .showroom-panel:hover .showroom-panel__cta,
+html.theme-gold #order-showroom .showroom-panel__cta:hover {
+  background: linear-gradient(180deg, #d4b866, #a88420) !important;
+  color: #080604 !important;
+  border-color: #e8d9b4 !important;
+}
+
+html.theme-gold .showroom-close {
+  color: var(--gold-soft) !important;
+  border-color: var(--gold-border) !important;
+  letter-spacing: 0.2em !important;
+  font-weight: 600 !important;
+}
+
+html.theme-gold .showroom-close:hover {
+  color: #faf4e6 !important;
+  border-color: rgba(232, 213, 168, 0.62) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 235, 0.12),
+    0 8px 28px rgba(0, 0, 0, 0.48),
+    0 0 28px var(--gold-glow) !important;
+}
+
+/* —— Shop atelier (open) — layout + gold portrait cards —— */
+#shop-atelier.is-open .shop-cat__hero {
+  max-width: var(--mono-content-max) !important;
+  margin: 0 auto !important;
+  padding: 0 clamp(1.25rem, 3vw, 2rem) 0.15rem !important;
+  text-align: center !important;
+}
+
+#shop-atelier.is-open .shop-cat__rail {
+  max-width: var(--mono-content-max) !important;
+  margin: 0 auto !important;
+  padding-top: 0 !important;
+  padding-bottom: 0.1rem !important;
+}
+
+#shop-atelier.is-open .shop-cat__title,
+#shop-atelier.is-open .shop-cat__subtitle {
+  text-align: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+#shop-atelier.is-open .shop-cat__scroller {
+  display: block !important;
+  width: 100% !important;
+  max-width: var(--mono-content-max) !important;
+  margin: 0 auto !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+  padding: 0.25rem clamp(1rem, 3vw, 2rem) 1.5rem !important;
+}
+
+#shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
+#shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
+#shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(200px, 270px)) !important;
+  justify-content: center !important;
+  align-items: stretch !important;
+  gap: clamp(16px, 1.8vw, 22px) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0.15rem auto 0 !important;
+  min-height: 0 !important;
+  padding: 0 0 0.5rem !important;
+}
+
+@media (max-width: 1280px) {
+  #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
+  #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
+  #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
+    grid-template-columns: repeat(3, minmax(200px, 270px)) !important;
+  }
+}
+
+@media (max-width: 960px) {
+  #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
+  #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
+  #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
+    grid-template-columns: repeat(2, minmax(180px, 270px)) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
+  #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
+  #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
+    grid-template-columns: minmax(0, min(100%, 300px)) !important;
+    justify-content: center !important;
+  }
+}
+
+#shop-atelier.is-open .shop-cat__grid--empty {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  max-width: min(1180px, 100%) !important;
+  min-height: clamp(48vh, 56vh, 64vh) !important;
+  margin: clamp(0.35rem, 1.5vh, 1rem) auto 0 !important;
+  padding: clamp(1rem, 3vw, 2rem) clamp(1.25rem, 4vw, 2.5rem) !important;
+}
+
+#shop-atelier.is-open .shop-cat__scroller:has(.shop-cat__grid--empty) {
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+#shop-atelier.is-open .shop-bc-card,
+#shop-atelier.is-open .product-card,
+#shop-atelier.is-open #shop-view-list:not([hidden]) .shop-bc-card,
+#shop-atelier.is-open #shop-view-list:not([hidden]) a.shop-bc-card {
+  position: relative !important;
+  display: block !important;
+  flex: none !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: clamp(440px, 48vh, 540px) !important;
+  min-height: 0 !important;
+  max-height: 560px !important;
+  aspect-ratio: auto !important;
+  margin-top: 0 !important;
+  border-radius: 20px !important;
+  border: 1px solid var(--gold-border) !important;
+  transform: none !important;
+  filter: none !important;
+  animation: shopBcCardIn 0.95s var(--shop-ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both !important;
+  opacity: 1 !important;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.52),
+    0 0 18px rgba(201, 162, 39, 0.06) !important;
+  overflow: hidden !important;
+  background: #050403 !important;
+  transition:
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.55s ease,
+    border-color 0.55s ease !important;
+}
+
+#shop-atelier.is-open .shop-bc-card:hover {
+  transform: translateY(-6px) scale(1.008) !important;
+  filter: none !important;
+  border-color: rgba(232, 217, 180, 0.55) !important;
+  box-shadow:
+    0 22px 48px rgba(0, 0, 0, 0.58),
+    0 0 22px rgba(201, 162, 39, 0.1) !important;
+}
+
+#shop-atelier.is-open .shop-bc-card__media {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: #030201 !important;
+}
+
+#shop-atelier.is-open .shop-bc-card__shade {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  background: linear-gradient(
+    to top,
+    rgba(5, 4, 2, 0.82) 0%,
+    rgba(5, 4, 2, 0.38) 48%,
+    rgba(5, 4, 2, 0.12) 72%,
+    transparent 100%
+  ) !important;
+  pointer-events: none !important;
+}
+
+#shop-atelier.is-open .shop-bc-card__bottom {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 2 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+#shop-atelier.is-open .shop-bc-card__media img,
+#shop-atelier.is-open .shop-bc-card__media video,
+#shop-view-list:not([hidden]) .shop-bc-card__media img,
+#shop-view-list:not([hidden]) .shop-bc-card__media video {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  filter: brightness(0.78) contrast(1.06) saturate(0.9) !important;
+  -webkit-filter: brightness(0.78) contrast(1.06) saturate(0.9) !important;
+  opacity: 1 !important;
+  transform: scale(1.02) !important;
+  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+#shop-atelier.is-open .shop-bc-card:hover .shop-bc-card__media img,
+#shop-atelier.is-open .shop-bc-card:hover .shop-bc-card__media video {
+  filter: brightness(0.86) contrast(1.06) saturate(0.94) !important;
+  -webkit-filter: brightness(0.86) contrast(1.06) saturate(0.94) !important;
+  transform: scale(1.04) !important;
+}
+
+#shop-atelier.is-open .shop-bc-card__shine {
+  opacity: 0 !important;
+}
+
+#shop-atelier.is-open .shop-bc-card:hover .shop-bc-card__shine {
+  opacity: 0.35 !important;
+  background: linear-gradient(
+    125deg,
+    transparent 42%,
+    rgba(255, 250, 240, 0.02) 48%,
+    rgba(255, 248, 232, 0.04) 50%,
+    rgba(255, 250, 240, 0.02) 52%,
+    transparent 58%
+  ) !important;
+}
+
+#shop-atelier.is-open .shop-bc-card__name {
+  font-family: var(--font-display, var(--shop-font-display)) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  font-size: clamp(1.05rem, 1.35vw, 1.25rem) !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: var(--shop-ivory, #f5f0e6) !important;
+}
+
+#shop-atelier.is-open .shop-bc-card__price {
+  font-family: var(--font-ui, var(--shop-font-ui)) !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: var(--gold-soft) !important;
+}
+
+#shop-atelier.is-open .shop-bc-card__arrow {
+  background: rgba(0, 0, 0, 0.35) !important;
+  border: 1px solid var(--gold-border) !important;
+  color: var(--gold-soft) !important;
+  border-radius: 999px !important;
+}
+
+#shop-atelier.is-open .shop-bc-card:hover .shop-bc-card__arrow {
+  background: linear-gradient(180deg, #d4b866, #a88420) !important;
+  color: #080604 !important;
+  border-color: #e8d9b4 !important;
+}
+
+/* Gold primary CTAs in shop */
+html.theme-gold #shop-atelier .shop-btn-primary,
+html.theme-gold #shop-atelier a.shop-btn-primary,
+html.theme-gold #shop-atelier .shop-btn-primary--luxe,
+html.theme-gold #shop-atelier .shop-cart-page__cta-final,
+html.theme-gold #shop-atelier .shop-checkout__submit {
+  background: linear-gradient(180deg, #d4b866 0%, #b8943f 52%, #9a7a28 100%) !important;
+  color: #080604 !important;
+  -webkit-text-fill-color: #080604 !important;
+  border: 1px solid rgba(232, 217, 180, 0.55) !important;
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.42),
+    0 0 24px var(--gold-glow) !important;
+}
+
+html.theme-gold #shop-atelier .shop-btn-primary:hover,
+html.theme-gold #shop-atelier .shop-btn-primary--luxe:hover,
+html.theme-gold #shop-atelier .shop-cart-page__cta-final:hover:not(:disabled),
+html.theme-gold #shop-atelier .shop-checkout__submit:hover {
+  background: rgba(0, 0, 0, 0.5) !important;
+  color: var(--gold-soft) !important;
+  -webkit-text-fill-color: var(--gold-soft) !important;
+  border-color: var(--gold-border) !important;
+}
+
+html.theme-gold #shop-atelier .shop-btn-ghost,
+html.theme-gold #shop-atelier .shop-cart-page__cta-continue {
+  background: rgba(0, 0, 0, 0.38) !important;
+  color: var(--gold-soft) !important;
+  border: 1px solid var(--gold-border) !important;
+}
+
+html.theme-gold #shop-atelier .shop-btn-ghost:hover,
+html.theme-gold #shop-atelier .shop-cart-page__cta-continue:hover {
+  background: linear-gradient(180deg, #d4b866, #a88420) !important;
+  color: #080604 !important;
+  border-color: #e8d9b4 !important;
+}
+
+/* Warm gold dust (hero, intro, showroom) */
+html.theme-gold .order-hero__particle,
+html.theme-gold .order-hero__particle--near,
+html.theme-gold .order-hero__particle--mid,
+html.theme-gold .order-hero__particle--far {
+  background: #e8d4b0 !important;
+  box-shadow:
+    0 0 6px rgba(201, 162, 39, 0.42),
+    0 0 14px rgba(212, 185, 120, 0.22) !important;
+}
+
+html.theme-gold .showroom-panel__mote,
+html.theme-gold .intro-dust span {
+  background: #e6d2a8 !important;
+  box-shadow:
+    0 0 6px rgba(201, 162, 39, 0.35),
+    0 0 12px rgba(180, 145, 70, 0.18) !important;
+}
+
+html.theme-gold .shop-ambient-particle {
+  background: #e0c890 !important;
+  box-shadow: 0 0 8px rgba(201, 162, 39, 0.28) !important;
+}
+
+@media (max-width: 900px) {
+  #shop-atelier.is-open #shop-view-list:not([hidden]) .shop-bc-card,
+  #shop-atelier.is-open #shop-view-list:not([hidden]) a.shop-bc-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: clamp(400px, 52vh, 500px) !important;
+    max-height: 520px !important;
+  }
+}

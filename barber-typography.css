@@ -1,0 +1,208 @@
+/**
+ * The Barber — unified typography (BarberClub Grenoble editorial direction)
+ * Display: Cormorant Garamond | Editorial: Instrument Serif | UI: Inter
+ */
+
+:root {
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-editorial: "Instrument Serif", Georgia, serif;
+  --font-ui: "Inter", system-ui, -apple-system, sans-serif;
+
+  /* Legacy shop aliases */
+  --shop-font-display: var(--font-display);
+  --shop-font-serif: var(--font-editorial);
+  --shop-font-ui: var(--font-ui);
+  --shop-font-profile: var(--font-editorial);
+
+  --type-hero: clamp(4rem, 8vw, 8rem);
+  --type-section: clamp(2.4rem, 4vw, 4.5rem);
+  --type-card: 1.8rem;
+  --type-micro: 0.68rem;
+
+  --type-display-weight: 500;
+  --type-display-tracking: -0.03em;
+  --type-display-leading: 0.92;
+
+  --type-ui-weight: 400;
+  --type-ui-tracking: 0.18em;
+}
+
+/* —— Display: hero & section titles —— */
+h1,
+h2,
+h3,
+.hero-title,
+.section-title,
+.showroom-panel__title,
+.shop-title:not(.shop-cart-page__title),
+.shop-cart-page__title,
+.shop-cat__title,
+.shop-auth-brand-title,
+.shop-auth__h1,
+.shop-auth__h2,
+.shop-acc-hero__name,
+.shop-acc-section-title,
+.shop-pd__title,
+#shop-atelier .shop-bc-card__name,
+.admin-sidebar__title,
+.admin-card h2,
+.admin-card h3 {
+  font-family: var(--font-display);
+  font-weight: var(--type-display-weight);
+  letter-spacing: var(--type-display-tracking);
+  line-height: var(--type-display-leading);
+  text-transform: none;
+}
+
+h1,
+.hero-title,
+.shop-cart-page__title,
+.showroom-panel__title {
+  font-size: var(--type-hero);
+}
+
+h2,
+.section-title,
+.shop-cat__title,
+.shop-auth-brand-title {
+  font-size: var(--type-section);
+}
+
+h3,
+.shop-auth-form-title,
+.shop-card__name,
+#shop-atelier .shop-bc-card__name {
+  font-size: var(--type-card);
+}
+
+/* —— Editorial: subtitles & luxury copy —— */
+.subtitle,
+.editorial,
+.luxury-copy,
+.shop-lede,
+.shop-cart-page__lede,
+.shop-auth-brand-lede,
+.shop-cat__subtitle,
+.mch-hero-sub,
+.order-hero__micro,
+.order-hero__maison,
+.shop-pd__lede,
+.shop-pd__description,
+.shop-acc-hero__line,
+.shop-detail__desc,
+.shop-auth-benefit-row {
+  font-family: var(--font-editorial);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.55;
+  text-transform: none;
+}
+
+.mch-hero-title {
+  font-family: var(--font-display);
+  font-weight: var(--type-display-weight);
+  font-size: var(--type-section);
+  letter-spacing: var(--type-display-tracking);
+  line-height: var(--type-display-leading);
+  text-transform: none;
+}
+
+/* —— UI: labels, nav, buttons, forms —— */
+button,
+input,
+select,
+textarea,
+nav,
+label,
+.micro-label,
+.eyebrow,
+.badge,
+.step-label,
+.shop-brand,
+.shop-btn-primary,
+.shop-btn-ghost,
+.shop-chrome__back,
+.shop-chrome__auth,
+.shop-chrome__account,
+.shop-cart-btn,
+.showroom-close,
+.showroom-panel__cta,
+.order-hero__cta,
+.mch-maison,
+.mch-btn-retour,
+.shop-eyebrow,
+.shop-auth__eyebrow,
+.shop-cart-page__eyebrow,
+.shop-cart-page__maison,
+.shop-auth-brand-logo,
+.shop-cat-brand__link,
+.shop-cat-merch-link,
+.shop-checkout-progress__step,
+.shop-account-stat__label,
+.admin-nav__btn,
+.admin-sidebar__brand,
+.admin-inp,
+.admin-btn,
+.barber-theme-dev-toggle {
+  font-family: var(--font-ui);
+  font-weight: var(--type-ui-weight);
+  letter-spacing: var(--type-ui-tracking);
+  text-transform: uppercase;
+}
+
+.micro-label,
+.eyebrow,
+.shop-eyebrow,
+.shop-auth__eyebrow,
+.shop-cart-page__eyebrow,
+.mch-maison,
+.shop-auth-brand-logo,
+.showroom-close {
+  font-size: var(--type-micro);
+  font-weight: 500;
+}
+
+/* Body default */
+html,
+body {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+/* Prices & stats — UI caps */
+.shop-card__price,
+.shop-detail__price,
+#shop-atelier .shop-bc-card__price,
+.shop-cart-row__price-val,
+.shop-account-stat__value {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Drawer / summary labels */
+.shop-drawer__head h2 {
+  font-family: var(--font-display);
+  font-size: var(--type-card);
+  font-weight: var(--type-display-weight);
+  letter-spacing: var(--type-display-tracking);
+  text-transform: none;
+}
+
+.shop-cart-page__summary-kicker,
+.shop-cart-page__summary-row dt {
+  font-family: var(--font-ui);
+  font-size: var(--type-micro);
+  font-weight: 500;
+  letter-spacing: var(--type-ui-tracking);
+  text-transform: uppercase;
+}
+
+.shop-cart-page__summary-label {
+  font-family: var(--font-editorial);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}

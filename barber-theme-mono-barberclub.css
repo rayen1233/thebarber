@@ -1,0 +1,565 @@
+/**
+ * MONO BARBERCLUB — true black & white editorial (loads last).
+ * Scope: html.theme-mono / body.theme-mono only.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap");
+
+/* ── Tokens & fonts ── */
+html.theme-mono,
+body.theme-mono {
+  --font-display: "Orbitron", sans-serif;
+  --font-ui: "Inter", sans-serif;
+  --font-editorial: "Inter", sans-serif;
+  --shop-font-display: "Orbitron", sans-serif;
+  --shop-font-serif: "Inter", sans-serif;
+  --shop-font-ui: "Inter", sans-serif;
+  --shop-font-profile: "Inter", sans-serif;
+  --mono-border: rgba(255, 255, 255, 0.18);
+  --bg: #000;
+  --text: #fff;
+  --gold: #fff;
+  --gold-soft: #fff;
+  --gold-dim: rgba(255, 255, 255, 0.55);
+  --shop-gold: #fff;
+  --shop-muted: rgba(255, 255, 255, 0.55);
+  --accent-btn-grad: transparent;
+  --accent-btn-text: #000;
+}
+
+body.theme-mono {
+  background: #000 !important;
+  color: #fff !important;
+  font-family: var(--font-ui) !important;
+}
+
+/* Orbitron — giant display titles */
+body.theme-mono h1,
+body.theme-mono h2,
+body.theme-mono h3,
+body.theme-mono .hero-title,
+body.theme-mono .section-title,
+body.theme-mono .showroom-panel__title,
+body.theme-mono .shop-title,
+body.theme-mono .shop-cart-page__title,
+body.theme-mono #shop-atelier .shop-cat__title,
+body.theme-mono .shop-auth-brand-title,
+body.theme-mono .shop-auth__h1,
+body.theme-mono .shop-acc-hero__name,
+body.theme-mono .shop-pd__title,
+body.theme-mono .mch-hero-title,
+body.theme-mono .site h1 {
+  font-family: var(--font-display) !important;
+  font-weight: var(--type-display-weight, 700) !important;
+  letter-spacing: 0.16em !important;
+  text-transform: none !important;
+}
+
+/* Inter — body & editorial (no Cormorant / Instrument Serif) */
+body.theme-mono p,
+body.theme-mono li,
+body.theme-mono .lede,
+body.theme-mono .subtitle,
+body.theme-mono .editorial,
+body.theme-mono .shop-lede,
+body.theme-mono .shop-auth__lede,
+body.theme-mono #shop-atelier .shop-cat__subtitle,
+body.theme-mono #shop-atelier .shop-bc-card__name,
+body.theme-mono .shop-auth-form-title,
+body.theme-mono .shop-card__name {
+  font-family: var(--font-ui) !important;
+  font-weight: 400 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+}
+
+/* Inter uppercase — UI chrome */
+body.theme-mono button,
+body.theme-mono .btn,
+body.theme-mono .eyebrow,
+body.theme-mono .micro-label,
+body.theme-mono .shop-eyebrow,
+body.theme-mono .shop-auth__eyebrow,
+body.theme-mono .shop-cart-page__eyebrow,
+body.theme-mono .mch-maison,
+body.theme-mono .shop-cart-page__maison,
+body.theme-mono label,
+body.theme-mono .shop-btn-primary,
+body.theme-mono .shop-btn-ghost,
+body.theme-mono .showroom-panel__cta,
+body.theme-mono #shop-atelier .shop-bc-card__price,
+body.theme-mono .shop-chrome__back,
+body.theme-mono .shop-chrome__auth,
+body.theme-mono .admin-nav__btn {
+  font-family: var(--font-ui) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.18em !important;
+}
+
+/* ── Global B&W (no gold / grey gradients) ── */
+body.theme-mono #page-scroll-root,
+body.theme-mono #shop-atelier,
+body.theme-mono #shop-atelier.is-open,
+body.theme-mono .order-showroom,
+body.theme-mono .shop-main,
+body.theme-mono .site {
+  background: #000 !important;
+  background-image: none !important;
+  color: #fff !important;
+}
+
+body.theme-mono .shop-auth-page,
+body.theme-mono .shop-checkout-page,
+body.theme-mono .shop-account-page,
+body.theme-mono .shop-order-done-page {
+  background: #000 !important;
+  background-image: none !important;
+}
+
+body.theme-mono *::-webkit-scrollbar-thumb {
+  background: #fff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+body.theme-mono *::-webkit-scrollbar-track {
+  background: #000 !important;
+}
+
+html.theme-mono *,
+body.theme-mono * {
+  scrollbar-color: #fff #000 !important;
+}
+
+/* ── Buttons — outline invert ── */
+body.theme-mono button,
+body.theme-mono .btn,
+body.theme-mono .btn--gold,
+body.theme-mono .primary-btn,
+body.theme-mono .add-to-cart,
+body.theme-mono .checkout-submit,
+body.theme-mono .shop-btn-primary,
+body.theme-mono .shop-btn-primary--luxe,
+body.theme-mono .shop-btn-ghost,
+body.theme-mono .shop-cart-page__cta-final,
+body.theme-mono .shop-pd__cta-primary,
+body.theme-mono .shop-checkout__submit,
+body.theme-mono #shop-atelier .shop-btn-primary,
+body.theme-mono button[type="submit"]:not(.barber-theme-dev-toggle) {
+  background: transparent !important;
+  background-image: none !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+
+body.theme-mono .shop-btn-primary--luxe::before,
+body.theme-mono .shop-btn-primary--luxe::after {
+  display: none !important;
+}
+
+body.theme-mono button:hover,
+body.theme-mono .btn:hover,
+body.theme-mono .shop-btn-primary:hover,
+body.theme-mono .shop-btn-primary--luxe:hover,
+body.theme-mono .shop-cart-page__cta-final:hover:not(:disabled),
+body.theme-mono button[type="submit"]:not(.barber-theme-dev-toggle):hover {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
+  transform: none !important;
+}
+
+/* Cards */
+body.theme-mono .glass-card,
+body.theme-mono .shop-co-card,
+body.theme-mono .shop-co-summary,
+body.theme-mono .shop-auth-form-card,
+body.theme-mono .shop-account-order-card,
+body.theme-mono #shop-atelier .shop-bc-card,
+body.theme-mono #shop-atelier .shop-pd__glass {
+  background: #000 !important;
+  border: 1px solid var(--mono-border) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Avatars — no silver gradients */
+body.theme-mono .avatar,
+body.theme-mono .shop-acc-hero__avatar,
+body.theme-mono .shop-acc-hero__disc-badge,
+body.theme-mono .shop-pd__badge--stock {
+  background: transparent !important;
+  background-image: none !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: none !important;
+}
+
+body.theme-mono .shop-chrome__cart-count,
+body.theme-mono .shop-cart-btn__count {
+  background: #fff !important;
+  color: #000 !important;
+  background-image: none !important;
+}
+
+/* ── Images (default + hover) ── */
+body.theme-mono img:not([src*="data:"]):not(.logo):not([src*="logo" i]):not(.order-hero__bg),
+body.theme-mono video:not(.logo):not(.order-hero__bg),
+body.theme-mono .shop-bc-card__media img,
+body.theme-mono .shop-bc-card__media video,
+body.theme-mono .shop-product-card__img img,
+body.theme-mono .shop-pd__hero-backdrop img,
+body.theme-mono .shop-pd__hero-backdrop video,
+body.theme-mono #shop-atelier .shop-pd__glass-media img,
+body.theme-mono #shop-atelier .shop-pd__glass-media video {
+  opacity: 1 !important;
+  filter: grayscale(1) brightness(0.72) contrast(1.35) saturate(0) !important;
+}
+
+body.theme-mono .shop-bc-card:hover .shop-bc-card__media img,
+body.theme-mono .shop-bc-card:hover .shop-bc-card__media video,
+body.theme-mono .shop-product-card:hover .shop-product-card__img img,
+body.theme-mono #shop-atelier .shop-bc-card:hover .shop-bc-card__media img,
+body.theme-mono #shop-atelier .shop-bc-card:hover .shop-bc-card__media video {
+  filter: grayscale(1) brightness(1) contrast(1.28) saturate(0) !important;
+}
+
+/* Logo — original, no filter */
+body.theme-mono .logo,
+body.theme-mono .logo-name,
+body.theme-mono .cine-logo-lit,
+body.theme-mono .cine-logo-base,
+body.theme-mono img[src*="logo" i],
+body.theme-mono .order-hero__logo img {
+  filter: none !important;
+  -webkit-filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Intro hero — full color from first frame */
+body.theme-mono .order-hero__bg,
+body.theme-mono body.intro-reveal .order-hero__bg,
+body.theme-mono .order-hero__imgbox img,
+body.theme-mono .order-hero__imgbox video {
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+  animation: none !important;
+}
+
+/* Kill warm decorative layers */
+body.theme-mono .intro-grain-gold,
+body.theme-mono .shop-pd__hero-vignette--gold,
+body.theme-mono .shop-cat__gold-leak,
+body.theme-mono .shop-pd__hero-gold,
+body.theme-mono .order-hero__amb,
+body.theme-mono .order-hero__warm-focus,
+body.theme-mono .order-hero__leak--l,
+body.theme-mono .order-hero__leak--r,
+body.theme-mono .mch-atmosphere__mist,
+body.theme-mono .shop-acc-hero__glow,
+body.theme-mono .shop-lux-card__glow {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  background: transparent !important;
+}
+
+/* ═══ Showroom 2×2 — visible images, light overlays ═══ */
+body.theme-mono #order-showroom {
+  background: #000 !important;
+}
+
+body.theme-mono #order-showroom .showroom-split__vline,
+body.theme-mono #order-showroom .showroom-split__hline,
+body.theme-mono #order-showroom .showroom-panel__border {
+  opacity: 0 !important;
+  display: none !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel__bloom,
+body.theme-mono #order-showroom .showroom-panel__light,
+body.theme-mono #order-showroom .showroom-panel__sweep {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel::before {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.12),
+    rgba(0, 0, 0, 0.38)
+  ) !important;
+  opacity: 0.55 !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel::after {
+  opacity: 0 !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel__cine,
+body.theme-mono #order-showroom .showroom-panel__shade,
+body.theme-mono #order-showroom .showroom-panel__vig {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.55),
+    transparent 55%
+  ) !important;
+  opacity: 0.45 !important;
+  mix-blend-mode: normal !important;
+  box-shadow: none !important;
+}
+
+body.theme-mono #order-showroom .showroom-panel:hover .showroom-panel__cine,
+body.theme-mono #order-showroom .showroom-panel:hover .showroom-panel__shade {
+  opacity: 0.28 !important;
+}
+
+body.theme-mono .showroom-panel__img,
+body.theme-mono #order-showroom .showroom-panel__img {
+  opacity: 1 !important;
+  visibility: visible !important;
+  filter: grayscale(1) brightness(0.38) contrast(1.45) saturate(0) !important;
+}
+
+body.theme-mono .showroom-panel:hover .showroom-panel__img,
+body.theme-mono #order-showroom .showroom-panel:hover .showroom-panel__img {
+  opacity: 1 !important;
+  filter: grayscale(1) brightness(0.78) contrast(1.35) saturate(0) !important;
+  transform: translateZ(0) scale(1.04) !important;
+}
+
+body.theme-mono .showroom-split__panels:hover .showroom-panel:not(:hover) .showroom-panel__img,
+body.theme-mono #order-showroom .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover)
+  .showroom-panel__img {
+  opacity: 0.55 !important;
+  filter: grayscale(1) brightness(0.22) contrast(1.4) saturate(0) !important;
+}
+
+body.theme-mono #order-showroom .showroom-split__panels:hover .showroom-panel:not(:hover),
+body.theme-mono #order-showroom .showroom-split__panels:has(> .showroom-panel:hover)
+  > .showroom-panel:not(:hover) {
+  opacity: 1 !important;
+}
+
+body.theme-mono #order-showroom .showroom-split {
+  padding: clamp(0.75rem, 2vw, 1.5rem) !important;
+  box-sizing: border-box;
+}
+
+body.theme-mono #order-showroom .showroom-panel__title {
+  font-family: var(--font-display) !important;
+  font-size: clamp(2rem, 4.5vw, 3.25rem) !important;
+  font-weight: 400 !important;
+  color: #fff !important;
+  text-shadow: 0 8px 32px rgba(0, 0, 0, 0.75) !important;
+}
+
+body.theme-mono .showroom-panel__cta,
+body.theme-mono #order-showroom .showroom-panel__cta {
+  background: transparent !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+  border-radius: 999px !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+body.theme-mono .showroom-panel__cta:hover,
+body.theme-mono #order-showroom .showroom-panel__cta:hover,
+body.theme-mono #order-showroom .showroom-panel:hover .showroom-panel__cta {
+  background: #fff !important;
+  color: #000 !important;
+  border-color: #fff !important;
+}
+
+/* ═══ Shop category — grid, proper card scale ═══ */
+body.theme-mono #shop-atelier .shop-cat__hero {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: clamp(1.25rem, 3vh, 2.5rem) clamp(1.25rem, 3vw, 2.5rem)
+    clamp(0.5rem, 1.5vh, 1rem) !important;
+}
+
+body.theme-mono #shop-atelier .shop-cat__rail {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 clamp(1.25rem, 3vw, 2.5rem) clamp(1.5rem, 3vh, 2.5rem) !important;
+}
+
+body.theme-mono #shop-atelier .shop-cat__scroller {
+  display: block !important;
+  overflow: visible !important;
+  justify-content: flex-start !important;
+}
+
+body.theme-mono #shop-atelier .shop-cat__grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+  justify-content: start !important;
+  align-items: stretch !important;
+  gap: clamp(1.25rem, 2.5vw, 2rem) !important;
+  width: 100% !important;
+  max-width: 1180px !important;
+  margin: 0 auto !important;
+  min-height: 0 !important;
+  padding: clamp(0.75rem, 2vw, 1.5rem) 0 !important;
+}
+
+body.theme-mono #shop-atelier .shop-bc-card {
+  flex: unset !important;
+  width: 100% !important;
+  max-width: 320px !important;
+  min-width: 0 !important;
+  height: 460px !important;
+  margin-top: 0 !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  animation: none !important;
+  border-radius: 4px !important;
+}
+
+body.theme-mono #shop-atelier .shop-bc-card:nth-child(n) {
+  height: 460px !important;
+  margin-top: 0 !important;
+  border-radius: 4px !important;
+}
+
+/* Single product — left-aligned premium row */
+body.theme-mono #shop-atelier .shop-cat__grid:has(.shop-bc-card:only-of-type),
+body.theme-mono #shop-atelier .shop-cat__grid:has(.shop-bc-card:first-child:last-child) {
+  grid-template-columns: minmax(260px, 320px) !important;
+  justify-content: start !important;
+}
+
+body.theme-mono #shop-atelier .shop-bc-card__shade {
+  background: linear-gradient(
+    180deg,
+    transparent 35%,
+    rgba(0, 0, 0, 0.75) 100%
+  ) !important;
+}
+
+body.theme-mono #shop-atelier .shop-bc-card__name {
+  font-family: var(--font-ui) !important;
+  font-size: clamp(0.95rem, 1.8vw, 1.1rem) !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  text-transform: none !important;
+  letter-spacing: 0.02em !important;
+}
+
+body.theme-mono #shop-atelier .shop-bc-card__price {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+body.theme-mono #shop-atelier .shop-bc-card__arrow {
+  background: transparent !important;
+  border: 1px solid #fff !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+body.theme-mono #shop-atelier .shop-bc-card:hover .shop-bc-card__arrow {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+/* ═══ Account / cart / checkout — tighter, higher on page ═══ */
+body.theme-mono .shop-auth-page,
+body.theme-mono .shop-checkout-page,
+body.theme-mono .shop-account-page,
+body.theme-mono .shop-order-done-page {
+  max-width: 1120px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: clamp(0.65rem, 2vh, 1.25rem) clamp(1rem, 3vw, 2rem) 2rem !important;
+  min-height: min(100dvh, 960px) !important;
+}
+
+body.theme-mono #shop-atelier #shop-view-cart .shop-main.shop-cart-page,
+body.theme-mono #shop-atelier .shop-checkout-page .shop-main,
+body.theme-mono #shop-atelier .shop-account-page .shop-main {
+  max-width: 1120px !important;
+  margin: 0 auto !important;
+  padding-top: clamp(0.65rem, 2vh, 1.25rem) !important;
+}
+
+body.theme-mono .shop-cart-page__head,
+body.theme-mono .shop-auth-page__head {
+  margin-bottom: clamp(1rem, 2.5vw, 1.75rem) !important;
+}
+
+body.theme-mono .shop-co-card,
+body.theme-mono .shop-account-order-card {
+  padding: clamp(1rem, 2vw, 1.35rem) !important;
+}
+
+/* ═══ Global spacing — less empty void ═══ */
+body.theme-mono .site-inner,
+body.theme-mono #shop-atelier .shop-luxe-shell,
+body.theme-mono .shop-section {
+  padding-top: min(90px, clamp(2rem, 6vw, 5rem)) !important;
+  padding-bottom: min(90px, clamp(2rem, 6vw, 5rem)) !important;
+}
+
+body.theme-mono #shop-atelier .shop-main {
+  padding-top: clamp(0.5rem, 1.5vh, 1rem) !important;
+}
+
+body.theme-mono #shop-atelier .shop-cat__title,
+body.theme-mono #shop-atelier .shop-cat__subtitle {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  animation: none !important;
+}
+
+/* Text accents — flat white */
+body.theme-mono .site h1 em,
+body.theme-mono .shop-product-card__price,
+body.theme-mono .shop-chrome__logo-mark,
+body.theme-mono #shop-atelier .shop-bc-card__price {
+  background: none !important;
+  background-image: none !important;
+  -webkit-text-fill-color: #fff !important;
+  color: #fff !important;
+}
+
+body.theme-mono .order-showroom {
+  background: #000 !important;
+  background-image: none !important;
+}
+
+@media (max-width: 900px) {
+  body.theme-mono #shop-atelier .shop-cat__scroller {
+    overflow-x: auto !important;
+  }
+
+  body.theme-mono #shop-atelier .shop-cat__grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    width: max-content !important;
+    max-width: none !important;
+    padding-left: max(1rem, env(safe-area-inset-left, 0)) !important;
+    padding-right: max(1rem, env(safe-area-inset-right, 0)) !important;
+  }
+
+  body.theme-mono #shop-atelier .shop-bc-card {
+    flex: 0 0 min(72vw, 320px) !important;
+    width: min(72vw, 320px) !important;
+    max-width: 320px !important;
+    scroll-snap-align: center;
+  }
+}

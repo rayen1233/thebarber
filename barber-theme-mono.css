@@ -1,0 +1,45 @@
+/**
+ * Monochrome theme — dark luxury foundation (see barber-theme-mono-pure.css for UI).
+ */
+
+html.theme-mono,
+body.theme-mono {
+  --font-display: "Orbitron", sans-serif;
+  --font-ui: "Inter", sans-serif;
+  --font-editorial: "Inter", sans-serif;
+  --shop-font-display: "Orbitron", sans-serif;
+  --shop-font-serif: "Inter", sans-serif;
+  --shop-font-ui: "Inter", sans-serif;
+  --bg: #000;
+  --text: #fff;
+  --accent: #fff;
+  --accent-soft: #fff;
+  --accent-dim: rgba(255, 255, 255, 0.45);
+  --accent-border: rgba(255, 255, 255, 0.12);
+  --accent-border-hover: rgba(255, 255, 255, 0.32);
+  --type-display-tracking: 0.16em;
+  --type-display-weight: 700;
+  --accent-panel: rgba(255, 255, 255, 0.03);
+  --accent-bg: #000;
+  --border-gold: rgba(255, 255, 255, 0.12);
+
+  --gold: #fff;
+  --gold-soft: #fff;
+  --gold-dim: rgba(255, 255, 255, 0.45);
+
+  --shop-gold: #fff;
+  --shop-gold-soft: #fff;
+  --shop-gold-dim: rgba(255, 255, 255, 0.45);
+  --shop-ivory: #fff;
+  --shop-muted: rgba(255, 255, 255, 0.45);
+  --lux-edge-gold: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --lux-glow-gold: none;
+  --lux-glow-gold-strong: none;
+  --lux-edge: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --shop-pd-glass-border: rgba(255, 255, 255, 0.12);
+}
+
+body.theme-mono {
+  background: #000 !important;
+  color: #fff !important;
+}
