@@ -25,6 +25,7 @@ import {
   CLIENT_UPLOAD_THRESHOLD_BYTES,
 } from "./lib/media-limits.js";
 import { catalogUrlFromBlobUpload } from "./lib/blob-media-url.mjs";
+import { loadBlobClientUpload } from "./lib/blob-client-upload.js";
 
 const ADMIN_KEY_SESSION = "thebarber_admin_key_v1";
 const REMOTE_API_BASE_SESSION = "thebarber_remote_api_base_v1";
@@ -773,12 +774,7 @@ async function uploadMediaBlobViaClient(blob, filename, opts = {}) {
     );
   }
 
-  let upload;
-  try {
-    ({ upload } = await import("https://cdn.jsdelivr.net/npm/@vercel/blob@2.4.0/+esm"));
-  } catch {
-    ({ upload } = await import("https://esm.sh/@vercel/blob@2.4.0/client"));
-  }
+  const upload = await loadBlobClientUpload();
   const pathname = mediaPathnameForUpload(filename, blob);
   const headers = {
     Authorization: `Bearer ${key}`,

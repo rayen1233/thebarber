@@ -16,7 +16,7 @@ import {
   uploadMediaBlob,
   uploadInlinePhotosInProducts,
   leanProductsForRemotePush,
-} from "./shop-remote.js";
+} from "./shop-remote.js?v=20260521-video2";
 import { dataUrlToBlob } from "./shop-media-store.js";
 
 /** @type {import("./shop-core.js").Product[]} */
