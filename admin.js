@@ -24,7 +24,7 @@ import {
   parseCatalogImportJson,
   migrateIdbVideosToRemote,
   restoreCatalogMediaFromSource,
-} from "./shop-remote.js?v=20260521-video8";
+} from "./shop-remote.js?v=20260522-uploadfast";
 import {
   getAdminCatalogProducts,
   refreshAdminCatalog,
@@ -623,8 +623,8 @@ function main() {
     setAdminStatus("Lecture de la vidéo…");
     try {
       if ((isRemoteMode() || getAdminKey()) && usesAdminDatabase()) {
-        const { uploadMediaBlob } = await import("./shop-remote.js?v=20260521-video8");
-        setAdminStatus("Envoi de la vidéo vers Vercel (max 6 Mo)…");
+        const { uploadMediaBlob } = await import("./shop-remote.js?v=20260522-uploadfast");
+        setAdminStatus("Envoi direct vers Vercel Blob (max 6 Mo)…");
         const { normalizeVideoUrlForCatalog } = await import("./lib/blob-media-url.mjs");
         const url = await uploadMediaBlob(f, f.name || "video.mp4", {
           onProgress: (p) => {

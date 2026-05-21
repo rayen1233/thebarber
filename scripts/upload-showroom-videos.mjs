@@ -59,22 +59,26 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("Upload showroom → Blob (private + /api/media)\n");
+  console.log("Upload showroom → Blob (parallèle, private + /api/media)\n");
 
-  for (const [localName, pathname] of PAIRS) {
-    const filePath = resolveLocalFile(localName);
-    if (!filePath) {
-      console.warn(`  SKIP ${localName} (fichier introuvable)`);
-      continue;
-    }
-    const buf = fs.readFileSync(filePath);
-    const mb = (buf.length / (1024 * 1024)).toFixed(2);
-    process.stdout.write(`  ${localName} (${mb} Mo) → ${pathname} … `);
-    const { result, access } = await putMediaBlob(pathname, buf, "video/mp4");
-    const url = catalogUrlFromBlobUpload(result, pathname, access);
-    console.log("OK");
-    console.log(`    ${url}\n`);
-  }
+  await Promise.all(
+    PAIRS.map(async ([localName, pathname]) => {
+      const filePath = resolveLocalFile(localName);
+      if (!filePath) {
+        console.warn(`  SKIP ${localName} (fichier introuvable)`);
+        return;
+      }
+      const buf = fs.readFileSync(filePath);
+      const mb = (buf.length / (1024 * 1024)).toFixed(2);
+      process.stdout.write(`  ${localName} (${mb} Mo) → ${pathname} … `);
+      const { result, access } = await putMediaBlob(pathname, buf, "video/mp4", {
+        multipart: buf.length > 4_500_000,
+      });
+      const url = catalogUrlFromBlobUpload(result, pathname, access);
+      console.log("OK");
+      console.log(`    ${url}\n`);
+    }),
+  );
 
   console.log("Terminé. Redéployez si besoin, puis hard-refresh intro.html.");
 }

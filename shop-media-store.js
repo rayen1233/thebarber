@@ -164,7 +164,7 @@ export async function persistProductVideoRef(productId, videoUrl) {
   if (trimmed.startsWith("data:") && /video|octet-stream/i.test(trimmed.slice(0, 40))) {
     try {
       const { usesRemoteCatalog, uploadMediaBlob, getAdminKey } = await import(
-        "./shop-remote.js?v=20260521-video8"
+        "./shop-remote.js?v=20260522-uploadfast"
       );
       if (usesRemoteCatalog() && getAdminKey()) {
         const url = await uploadMediaBlob(dataUrlToBlob(trimmed), `${productId}.mp4`, {

@@ -151,10 +151,14 @@ function videoCandidatesForIndex(i) {
 function configureShowroomVideo(v, opts = {}) {
   const preload = opts.preload === "auto" ? "auto" : "metadata";
   v.muted = true;
+  v.defaultMuted = true;
   v.loop = true;
-  v.autoplay = false;
+  v.autoplay = true;
   v.playsInline = true;
+  v.setAttribute("muted", "");
   v.setAttribute("playsinline", "");
+  v.setAttribute("autoplay", "");
+  v.setAttribute("loop", "");
   v.controls = false;
   v.removeAttribute("controls");
   v.setAttribute("controlsList", "nodownload nofullscreen noremoteplayback");
@@ -168,7 +172,12 @@ function configureShowroomVideo(v, opts = {}) {
 
 function isShowroomOpen() {
   const el = document.getElementById("order-showroom");
-  return Boolean(el?.classList.contains("is-open") && !el.classList.contains("is-closing"));
+  return Boolean(el?.classList.contains("is-open"));
+}
+
+/** Showroom visible (opening, open, or closing) — videos keep playing. */
+function showroomPlaybackActive() {
+  return isShowroomOpen();
 }
 
 function isProductionSite() {
@@ -177,23 +186,66 @@ function isProductionSite() {
   return host !== "localhost" && host !== "127.0.0.1";
 }
 
-function tryPlayShowroomVideo(video) {
-  if (!(video instanceof HTMLVideoElement) || !isShowroomOpen()) return;
+const showroomVideoKeepAliveBound = new WeakSet();
+/** @type {number} */
+let showroomPlayWatchId = 0;
+
+function bindShowroomVideoKeepAlive(video) {
+  if (!(video instanceof HTMLVideoElement) || showroomVideoKeepAliveBound.has(video)) return;
+  showroomVideoKeepAliveBound.add(video);
+  const resume = () => {
+    if (!showroomPlaybackActive() || !video.classList.contains("is-loaded")) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    configureShowroomVideo(video, { preload: "auto" });
+    const p = video.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  };
+  video.addEventListener("pause", resume);
+  video.addEventListener("ended", () => {
+    video.currentTime = 0;
+    resume();
+  });
+  video.addEventListener("stalled", resume);
+  video.addEventListener("waiting", resume);
+  video.addEventListener("suspend", resume);
+}
+
+function forcePlayShowroomVideo(video) {
+  if (!(video instanceof HTMLVideoElement)) return;
+  if (!showroomPlaybackActive()) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  video.setAttribute("preload", "auto");
-  const p = video.play();
-  if (p && typeof p.catch === "function") p.catch(() => {});
+  configureShowroomVideo(video, { preload: "auto" });
+  bindShowroomVideoKeepAlive(video);
+  const attempt = () => {
+    if (!showroomPlaybackActive()) return;
+    if (video.readyState < 1) return;
+    const p = video.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  };
+  attempt();
+  if (video.paused) {
+    video.addEventListener("canplay", attempt, { once: true });
+    video.addEventListener("loadeddata", attempt, { once: true });
+    video.addEventListener("playing", attempt, { once: true });
+  }
 }
 
 function syncShowroomVideoPlayback() {
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!isShowroomOpen() || reduce) {
-    pauseShowroomPanelVideos();
-    return;
-  }
+  if (!showroomPlaybackActive()) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   document.querySelectorAll(".showroom-panel__video.is-loaded").forEach((el) => {
-    if (el instanceof HTMLVideoElement) tryPlayShowroomVideo(el);
+    if (el instanceof HTMLVideoElement) forcePlayShowroomVideo(el);
   });
+}
+
+function startShowroomPlayWatch() {
+  stopShowroomPlayWatch();
+  showroomPlayWatchId = window.setInterval(() => syncShowroomVideoPlayback(), 600);
+}
+
+function stopShowroomPlayWatch() {
+  if (showroomPlayWatchId) window.clearInterval(showroomPlayWatchId);
+  showroomPlayWatchId = 0;
 }
 
 async function resolveFirstAssetUrl(urls) {
@@ -344,7 +396,7 @@ function loadShowroomPanelVideo(video, url) {
     }
     if (video.dataset.showroomSrc === url && video.classList.contains("is-loaded")) {
       configureShowroomVideo(video, { preload: "auto" });
-      tryPlayShowroomVideo(video);
+      forcePlayShowroomVideo(video);
       resolve(true);
       return;
     }
@@ -361,7 +413,7 @@ function loadShowroomPanelVideo(video, url) {
         media.style.backgroundColor = "#030201";
         media.style.backgroundImage = "none";
       }
-      tryPlayShowroomVideo(video);
+      forcePlayShowroomVideo(video);
       resolve(true);
     };
     const onErr = () => {
@@ -454,12 +506,6 @@ async function applyShowroomBackgrounds() {
       "[showroom] no background image found — using gradients. Add public/background1.jpg … background4.jpg next to intro.html.",
     );
   }
-}
-
-function pauseShowroomPanelVideos() {
-  document.querySelectorAll(".showroom-panel__video").forEach((el) => {
-    if (el instanceof HTMLVideoElement && !el.paused) el.pause();
-  });
 }
 
 function isShowroomStackLayout() {
@@ -623,6 +669,8 @@ function openShowroom() {
       el.setAttribute("aria-hidden", "false");
       setShowroomRouteState("open");
       seedShowroomPanelDust();
+      startShowroomPlayWatch();
+      syncShowroomVideoPlayback();
       void (async () => {
         try {
           if (!inited) {
@@ -650,8 +698,6 @@ function closeShowroom() {
   if (!el || !el.classList.contains("is-open") || el.classList.contains("is-closing")) return;
 
   setShowroomRouteState("closing");
-  pauseShowroomPanelVideos();
-  loadedShowroomVideoIndex.clear();
   applySplitLines(null);
   el.classList.add("is-closing");
 
@@ -659,6 +705,7 @@ function closeShowroom() {
     el.classList.remove("is-open", "is-closing");
     el.setAttribute("aria-hidden", "true");
     setShowroomRouteState(null);
+    stopShowroomPlayWatch();
   }, SHOWROOM_ROUTE_MS);
 }
 
@@ -966,20 +1013,22 @@ bindSplitLineHover();
 bindShowroomParallax();
 bindMerchTeaser();
 bindMerchTeaserParallax();
-function prefetchShowroomVideoUrls() {
+async function prefetchShowroomVideoUrls() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  void ensureShowroomVideoUrls();
+  await ensureShowroomVideoUrls();
+  const indices = [0, 1, 2, 3].filter((i) => pendingShowroomVideoUrl.has(i));
+  await Promise.all(indices.map((i) => loadShowroomVideoForPanel(i)));
+  if (showroomPlaybackActive()) syncShowroomVideoPlayback();
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", prefetchShowroomVideoUrls);
+  document.addEventListener("DOMContentLoaded", () => void prefetchShowroomVideoUrls());
 } else {
-  prefetchShowroomVideoUrls();
+  void prefetchShowroomVideoUrls();
 }
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") pauseShowroomPanelVideos();
-  else if (isShowroomOpen()) syncShowroomVideoPlayback();
+  if (showroomPlaybackActive()) syncShowroomVideoPlayback();
 });
 
 syncShowroomLayoutClass();
