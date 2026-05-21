@@ -123,9 +123,8 @@
             >
               <h2 style="margin-top: 0">Données sur Vercel</h2>
               <p class="lede" style="margin: 0 0 1rem; max-width: 52rem">
-                Le site en ligne lit le catalogue depuis le serveur, pas depuis votre PC. Les produits créés sur
-                <strong>localhost</strong> restent dans ce navigateur tant que vous ne les exportez pas puis ne les
-                importez ici (ou ne les publiez pas).
+                L’admin est relié à la <strong>base serveur</strong> (Vercel Blob). Le catalogue affiché vient du serveur
+                au chargement ; les suppressions et enregistrements mettent à jour la base avant confirmation.
               </p>
               <div class="admin-row-actions">
                 <button type="button" class="shop-btn-primary" id="admin-push-server">Publier sur le serveur</button>
@@ -207,7 +206,7 @@
       </main>
     </div>
     <script type="module" src="./barber-theme.js"></script>
-    <script type="module" src="./shop-bootstrap.js?v=20260524-media"></script>
-    <script type="module" src="./admin.js?v=20260524-media"></script>
+    <script type="module" src="./shop-bootstrap.js?v=20260521-db"></script>
+    <script type="module" src="./admin.js?v=20260521-db"></script>
   </body>
 </html>

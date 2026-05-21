@@ -11,7 +11,6 @@ const KEY = "main";
 export async function saveStoreSnapshotIdb(data) {
   if (typeof indexedDB === "undefined") return;
   const products = Array.isArray(data.products) ? data.products : [];
-  if (!products.length) return;
 
   const db = await openDb();
   await new Promise((resolve, reject) => {
@@ -29,6 +28,23 @@ export async function saveStoreSnapshotIdb(data) {
     );
   });
   db.close();
+}
+
+/** Remove cached catalogue (e.g. after server clear). */
+export async function clearStoreSnapshotIdb() {
+  if (typeof indexedDB === "undefined") return;
+  try {
+    const db = await openDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.oncomplete = () => resolve(null);
+      tx.onerror = () => reject(tx.error);
+      tx.objectStore(STORE).delete(KEY);
+    });
+    db.close();
+  } catch {
+    /* ignore */
+  }
 }
 
 /** @returns {Promise<{ products: unknown[], users: unknown[], orders: unknown[], savedAt?: string } | null>} */

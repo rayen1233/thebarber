@@ -16,6 +16,7 @@ import {
 import {
   saveStoreSnapshotIdb,
   loadStoreSnapshotIdb,
+  clearStoreSnapshotIdb,
 } from "./shop-store-idb.js";
 
 const ADMIN_KEY_SESSION = "thebarber_admin_key_v1";
@@ -98,23 +99,22 @@ function shouldApplyRemoteList(remote, local, forceEmpty) {
 
 /**
  * @param {{ products?: unknown[], users?: unknown[], orders?: unknown[] }} data
- * @param {{ forceEmpty?: boolean }} [opts]
+ * @param {{ forceEmpty?: boolean, serverWins?: boolean }} [opts]
  */
 function applyStoreToLocal(data, opts = {}) {
   const local = readLocalStorePayload();
-  const force = Boolean(opts.forceEmpty);
+  const force = Boolean(opts.forceEmpty || opts.serverWins);
+  const serverWins = Boolean(opts.serverWins);
 
-  if (shouldApplyRemoteList(data.products, local.products, force)) {
+  if (serverWins || shouldApplyRemoteList(data.products, local.products, force)) {
     persistProductsLocally(/** @type {import("./shop-core.js").Product[]} */ (data.products));
-    if (data.products.length > 0) {
-      void saveStoreSnapshotIdb({
-        products: data.products,
-        users: data.users ?? local.users,
-        orders: data.orders ?? local.orders,
-      });
-    }
+    void saveStoreSnapshotIdb({
+      products: Array.isArray(data.products) ? data.products : [],
+      users: data.users ?? local.users,
+      orders: data.orders ?? local.orders,
+    });
   } else if (Array.isArray(data.products) && data.products.length === 0 && local.products.length > 0) {
-    console.warn("[thebarber] serveur vide — produits locaux conservés");
+    console.warn("[thebarber] serveur vide — produits locaux conservés (mode hors-ligne)");
   }
 
   if (shouldApplyRemoteList(data.users, local.users, force)) {
@@ -145,9 +145,16 @@ export function readLocalStorePayload() {
   };
 }
 
-/** Pull server store into localStorage (all visitors). */
-export async function hydrateRemoteStore() {
+/**
+ * Pull server store into localStorage (all visitors).
+ * @param {{ serverWins?: boolean, allowIdbFallback?: boolean }} [opts]
+ *   serverWins — successful GET always replaces local catalogue (default true on Vercel).
+ *   allowIdbFallback — use IDB only when the network request fails (not when server is empty).
+ */
+export async function hydrateRemoteStore(opts = {}) {
   if (!isRemoteMode()) return { ok: true, source: "local" };
+  const serverWins = opts.serverWins !== false;
+  const allowIdbFallback = opts.allowIdbFallback !== false;
   if (hydratePromise) return hydratePromise;
 
   hydratePromise = (async () => {
@@ -158,32 +165,7 @@ export async function hydrateRemoteStore() {
       const meta = data._meta && typeof data._meta === "object" ? data._meta : {};
       const remoteCount = Array.isArray(data.products) ? data.products.length : 0;
 
-      if (!remoteCount) {
-        const cached = await loadStoreSnapshotIdb();
-        if (cached?.products?.length) {
-          applyStoreToLocal(cached);
-          return {
-            ok: true,
-            source: "idb-cache",
-            meta,
-            productCount: cached.products.length,
-          };
-        }
-        const local = readLocalStorePayload();
-        if (local.products.length > 0) {
-          console.warn(
-            "[thebarber] serveur vide — catalogue local conservé (publiez sur le serveur).",
-          );
-          return {
-            ok: true,
-            source: "local-preserved",
-            meta,
-            productCount: local.products.length,
-          };
-        }
-      }
-
-      applyStoreToLocal(data);
+      applyStoreToLocal(data, { serverWins, forceEmpty: serverWins });
       return {
         ok: true,
         source: "remote",
@@ -192,10 +174,12 @@ export async function hydrateRemoteStore() {
       };
     } catch (err) {
       console.warn("[thebarber] hydrate failed", err);
-      const cached = await loadStoreSnapshotIdb();
-      if (cached?.products?.length) {
-        applyStoreToLocal(cached);
-        return { ok: true, source: "idb-fallback", productCount: cached.products.length };
+      if (allowIdbFallback) {
+        const cached = await loadStoreSnapshotIdb();
+        if (cached?.products?.length) {
+          applyStoreToLocal(cached, { serverWins: false });
+          return { ok: true, source: "idb-fallback", productCount: cached.products.length };
+        }
       }
       return { ok: false, source: "local", error: err };
     } finally {
@@ -204,6 +188,11 @@ export async function hydrateRemoteStore() {
   })();
 
   return hydratePromise;
+}
+
+/** Admin: reload catalogue from server (never restore stale IDB over server). */
+export async function hydrateAdminFromServer() {
+  return hydrateRemoteStore({ serverWins: true, allowIdbFallback: false });
 }
 
 const MAX_PUT_BYTES = 3_200_000;
@@ -336,9 +325,11 @@ export async function pushRemoteStore(override, opts = {}) {
     const body = await encodeStorePutBody({ merge: false, ...payload });
     const out = await putStoreBody(key, body);
     lastCount = out.productCount ?? 0;
+    await clearStoreSnapshotIdb();
+  } else {
+    await saveStoreSnapshotIdb(payload);
   }
 
-  await saveStoreSnapshotIdb(payload);
   return { ok: true, productCount: lastCount };
 }
 
@@ -555,23 +546,10 @@ export async function patchRemoteUsersOrders() {
   return { ok: true };
 }
 
-/** Fire-and-forget sync after local mutations on Vercel. */
+/** Fire-and-forget sync after local mutations on Vercel (users/orders only — never auto-push catalogue). */
 export function scheduleRemoteSync() {
   if (!isRemoteMode()) return;
-  const payload = readLocalStorePayload();
-  const size = JSON.stringify(payload.products).length;
-  const run = getAdminKey()
-    ? () => {
-        if (size > 2_000_000) {
-          console.warn(
-            "[thebarber] sync catalogue complet ignoré (trop lourd) — enregistrez produit par produit dans l’admin.",
-          );
-          return Promise.resolve({ ok: true });
-        }
-        return pushRemoteStore();
-      }
-    : () => patchRemoteUsersOrders();
-  void run().catch((err) => {
+  void patchRemoteUsersOrders().catch((err) => {
     console.warn("[thebarber] remote sync failed", err);
   });
 }
@@ -631,6 +609,7 @@ export async function pushProductToRemote(product, opts = {}) {
   if (i >= 0) next[i] = /** @type {import("./shop-core.js").Product} */ (prepared);
   else next.push(/** @type {import("./shop-core.js").Product} */ (prepared));
   saveProducts(next, { skipRemoteSync: true });
+  await saveStoreSnapshotIdb(readLocalStorePayload());
   return { ok: true, product: prepared };
 }
 
@@ -657,9 +636,15 @@ export async function deleteProductFromRemote(id, opts = {}) {
     users: [],
     orders: [],
   });
-  await putStoreBody(key, body);
+  const out = await putStoreBody(key, body);
 
-  const payload = readLocalStorePayload();
-  await saveStoreSnapshotIdb(payload);
-  return { ok: true };
+  const { getProducts, saveProducts } = await import("./shop-core.js");
+  const list = getProducts().filter((p) => p.id !== productId);
+  saveProducts(list, { skipRemoteSync: true });
+  await saveStoreSnapshotIdb({
+    products: list,
+    users: readLocalStorePayload().users,
+    orders: readLocalStorePayload().orders,
+  });
+  return { ok: true, productCount: out.productCount };
 }
