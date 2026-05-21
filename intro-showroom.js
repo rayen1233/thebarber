@@ -284,9 +284,9 @@ async function loadShowroomCloudinaryCatalog() {
       const idx = Number(row?.index);
       let videoUrl = String(row?.videoUrl || "").trim();
       if (!Number.isInteger(idx) || idx < 0 || idx > 3 || !videoUrl) continue;
-      if (/[\s\r\n\\]/.test(videoUrl) || !/^https:\/\/res\.cloudinary\.com\/[a-z0-9]+\//i.test(videoUrl)) {
-        continue;
-      }
+      if (/[\s\r\n\\]/.test(videoUrl)) continue;
+      videoUrl = videoUrl.replace(/res\.cloudinary\.com\/[a-z0-9]+/i, "res.cloudinary.com/dswnmoq8d");
+      if (!/^https:\/\/res\.cloudinary\.com\/dswnmoq8d\//i.test(videoUrl)) continue;
       videoUrl = optimizeCloudinaryVideoUrl(videoUrl, { profile: "showroom" });
       const posterUrl =
         String(row?.posterUrl || "").trim() ||
@@ -299,17 +299,17 @@ async function loadShowroomCloudinaryCatalog() {
   const prefix = pathnameDir();
 
   try {
-    const apiUrl = new URL("/api/showroom-videos", origin || window.location.href).href;
-    const res = await fetch(apiUrl, { cache: "no-store" });
+    const jsonUrl = new URL("showroom-cloudinary.json", `${origin}${prefix}`).href;
+    const res = await fetch(jsonUrl, { cache: "default" });
     if (res.ok) ingest((await res.json()).videos);
   } catch {
-    /* json fallback */
+    /* API fallback */
   }
 
   if (!map.size) {
     try {
-      const jsonUrl = new URL("showroom-cloudinary.json", `${origin}${prefix}`).href;
-      const res = await fetch(jsonUrl, { cache: "default" });
+      const apiUrl = new URL("/api/showroom-videos", origin || window.location.href).href;
+      const res = await fetch(apiUrl, { cache: "no-store" });
       if (res.ok) ingest((await res.json()).videos);
     } catch {
       /* static / blob fallback */
