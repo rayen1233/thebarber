@@ -311,26 +311,52 @@ async function resolveShowroomVideoUrl(i) {
   return resolveFirstAssetUrl(rest);
 }
 
-/** Charge les vidéos Blob déjà résolues (évite lazy-load qui ne se déclenche pas). */
+/** Panneaux noirs — pas d’images de repli avant la vidéo. */
+function prepareShowroomBlackPlates() {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll(".showroom-panel__media").forEach((media) => {
+    if (!(media instanceof HTMLElement)) return;
+    media.style.backgroundColor = "#030201";
+    media.style.backgroundImage = "none";
+    const img = media.querySelector(".showroom-panel__img");
+    if (img instanceof HTMLImageElement) {
+      img.classList.remove("is-loaded");
+      img.removeAttribute("data-showroom-src");
+      img.removeAttribute("src");
+      img.setAttribute("hidden", "");
+    }
+    if (!reduce) media.classList.add("showroom-panel__media--video");
+    else media.classList.remove("showroom-panel__media--video");
+  });
+}
+
+/** Charge les vidéos Blob en parallèle. */
 async function primeShowroomVideos() {
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduce || !isShowroomOpen()) return;
-  const order = isShowroomStackLayout() ? [0, 1, 2, 3] : [0, 1, 2, 3];
-  for (const i of order) {
-    if (!pendingShowroomVideoUrl.has(i)) continue;
-    await loadShowroomVideoForPanel(i);
-  }
+  const indices = [0, 1, 2, 3].filter((i) => pendingShowroomVideoUrl.has(i));
+  await Promise.all(indices.map((i) => loadShowroomVideoForPanel(i)));
   syncShowroomVideoPlayback();
 }
 
 async function ensureShowroomVideoUrls() {
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduce) return;
-  for (let i = 0; i < 4; i++) {
-    if (pendingShowroomVideoUrl.has(i)) continue;
-    const hit = await resolveShowroomVideoUrl(i);
-    if (hit) pendingShowroomVideoUrl.set(i, hit);
-  }
+  const imgs = document.querySelectorAll(".showroom-panel__img");
+  await Promise.all(
+    [0, 1, 2, 3].map(async (i) => {
+      if (pendingShowroomVideoUrl.has(i)) return;
+      const hit = await resolveShowroomVideoUrl(i);
+      if (!hit) return;
+      pendingShowroomVideoUrl.set(i, hit);
+      const img = imgs[i];
+      const media = img instanceof HTMLImageElement ? img.closest(".showroom-panel__media") : null;
+      if (media instanceof HTMLElement) {
+        media.dataset.showroomVideoUrl = hit;
+        media.classList.add("showroom-panel__media--video");
+      }
+    }),
+  );
 }
 
 /** @param {number} i */
@@ -390,7 +416,7 @@ function loadShowroomPanelVideo(video, url) {
       resolve(true);
       return;
     }
-    configureShowroomVideo(video);
+    configureShowroomVideo(video, { preload: "auto" });
     let settled = false;
     const onReady = () => {
       if (settled) return;
@@ -398,6 +424,11 @@ function loadShowroomPanelVideo(video, url) {
       video.dataset.showroomSrc = url;
       video.removeAttribute("hidden");
       video.classList.add("is-loaded");
+      const media = video.closest(".showroom-panel__media");
+      if (media instanceof HTMLElement) {
+        media.style.backgroundColor = "#030201";
+        media.style.backgroundImage = "none";
+      }
       observeShowroomPanelVideo(video);
       syncShowroomVideoPlayback();
       resolve(true);
@@ -407,6 +438,7 @@ function loadShowroomPanelVideo(video, url) {
       settled = true;
       resolve(false);
     };
+    video.addEventListener("canplay", onReady, { once: true });
     video.addEventListener("loadeddata", onReady, { once: true });
     video.addEventListener("error", onErr, { once: true });
     video.src = url;
@@ -440,7 +472,6 @@ function loadShowroomPanelImage(img, url) {
 
 async function applyShowroomBackgrounds() {
   const imgs = document.querySelectorAll(".showroom-panel__img");
-  let anyHit = false;
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   pendingShowroomVideoUrl.clear();
@@ -450,7 +481,6 @@ async function applyShowroomBackgrounds() {
     const img = imgs[i];
     if (!(img instanceof HTMLImageElement)) continue;
     const media = img.closest(".showroom-panel__media");
-
     if (media instanceof HTMLElement) {
       const stale = media.querySelector(".showroom-panel__video");
       if (stale instanceof HTMLVideoElement) {
@@ -460,16 +490,24 @@ async function applyShowroomBackgrounds() {
         stale.setAttribute("hidden", "");
       }
       delete media.dataset.showroomVideoUrl;
+      media.classList.remove("showroom-panel__media--video");
     }
+  }
 
-    if (!reduceMotion && videoCandidatesForIndex(i).length) {
-      const videoHit = await resolveShowroomVideoUrl(i);
-      if (videoHit && media instanceof HTMLElement) {
-        pendingShowroomVideoUrl.set(i, videoHit);
-        media.dataset.showroomVideoUrl = videoHit;
-      }
-    }
+  prepareShowroomBlackPlates();
 
+  if (!reduceMotion) {
+    await ensureShowroomVideoUrls();
+    bindShowroomPanelLazyVideo();
+    if (isShowroomOpen()) await primeShowroomVideos();
+    return;
+  }
+
+  let anyHit = false;
+  for (let i = 0; i < imgs.length; i++) {
+    const img = imgs[i];
+    if (!(img instanceof HTMLImageElement)) continue;
+    const media = img.closest(".showroom-panel__media");
     const hit = await resolveFirstAssetUrl(bgCandidatesForIndex(i));
     if (hit) {
       const ok = await loadShowroomPanelImage(img, hit);
@@ -477,15 +515,8 @@ async function applyShowroomBackgrounds() {
         anyHit = true;
         if (media instanceof HTMLElement) media.style.backgroundImage = "";
       }
-    } else {
-      img.classList.remove("is-loaded");
-      img.removeAttribute("data-showroom-src");
-      img.removeAttribute("src");
-      img.setAttribute("hidden", "");
-      if (media instanceof HTMLElement) {
-        media.style.backgroundImage =
-          SHOWROOM_BG_FALLBACK[i] ?? SHOWROOM_BG_FALLBACK[0];
-      }
+    } else if (media instanceof HTMLElement) {
+      media.style.backgroundImage = SHOWROOM_BG_FALLBACK[i] ?? SHOWROOM_BG_FALLBACK[0];
     }
   }
   if (!anyHit && imgs.length) {
@@ -493,9 +524,6 @@ async function applyShowroomBackgrounds() {
       "[showroom] no background image found — using gradients. Add public/background1.jpg … background4.jpg next to intro.html.",
     );
   }
-
-  bindShowroomPanelLazyVideo();
-  if (isShowroomOpen()) void primeShowroomVideos();
 }
 
 function pauseShowroomPanelVideos() {
@@ -661,6 +689,10 @@ function openShowroom() {
 
   setShowroomRouteState("opening");
   applySplitLines(null);
+  prepareShowroomBlackPlates();
+  void ensureShowroomVideoUrls().then(() => {
+    if (isShowroomOpen()) void primeShowroomVideos();
+  });
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
