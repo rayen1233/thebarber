@@ -1,9 +1,8 @@
-import { put } from "@vercel/blob";
 import { applyApiCors } from "../lib/api-cors.mjs";
-import { getMediaBlobAccess, hasBlobCredentials } from "../lib/blob-access.mjs";
+import { hasBlobCredentials } from "../lib/blob-access.mjs";
+import { putMediaBlob } from "../lib/blob-put-media.mjs";
 import { readJsonBody } from "../lib/read-json-body.mjs";
 import { requireAdmin } from "../lib/store-server.js";
-import { blobSdkAuthOptions } from "../lib/blob-sdk-auth.mjs";
 import { catalogUrlFromBlobUpload } from "../lib/blob-media-url.mjs";
 import { MAX_IMAGE_UPLOAD_BYTES } from "../lib/media-limits.mjs";
 
@@ -18,32 +17,6 @@ export const config = {
     },
   },
 };
-
-/**
- * @param {string} pathname
- * @param {Buffer} buffer
- * @param {string} contentType
- */
-async function putMediaBlob(pathname, buffer, contentType) {
-  const auth = blobSdkAuthOptions();
-  const base = { ...auth, contentType, addRandomSuffix: false, allowOverwrite: true };
-  const preferred = getMediaBlobAccess();
-  try {
-    return { result: await put(pathname, buffer, { ...base, access: preferred }), access: preferred };
-  } catch (err) {
-    const retryPrivate =
-      preferred === "public" &&
-      (err?.name === "BlobAccessError" ||
-        /forbidden|access denied|not allowed|private store|public access/i.test(
-          String(err?.message || ""),
-        ));
-    if (!retryPrivate) throw err;
-    return {
-      result: await put(pathname, buffer, { ...base, access: "private" }),
-      access: "private",
-    };
-  }
-}
 
 /** @param {import("@vercel/node").VercelRequest} req @param {import("@vercel/node").VercelResponse} res */
 export default async function handler(req, res) {

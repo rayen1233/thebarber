@@ -2,12 +2,13 @@
  * Upload vidéo par morceaux (≤ ~3 Mo / requête) puis assemblage serveur → Blob.
  * Permet ~6 Mo sans appel navigateur vers vercel.com/api/blob.
  */
-import { put, del, list, get } from "@vercel/blob";
+import { del, list, get } from "@vercel/blob";
 import { applyApiCors } from "../lib/api-cors.mjs";
 import { readJsonBody } from "../lib/read-json-body.mjs";
 import { requireAdmin } from "../lib/store-server.js";
 import { getMediaBlobAccess } from "../lib/blob-access.mjs";
 import { blobSdkAuthOptions } from "../lib/blob-sdk-auth.mjs";
+import { putMediaBlob } from "../lib/blob-put-media.mjs";
 import { catalogUrlFromBlobUpload } from "../lib/blob-media-url.mjs";
 import {
   MAX_BLOB_UPLOAD_VIDEO_BYTES,
@@ -34,7 +35,8 @@ function partPath(sessionId, index) {
 
 /** @param {string} pathname @param {ReturnType<typeof blobSdkAuthOptions>} auth */
 async function readPartBuffer(pathname, auth) {
-  const tries = getMediaBlobAccess() === "public" ? ["public", "private"] : ["private", "public"];
+  const access = getMediaBlobAccess();
+  const tries = access === "public" ? ["public", "private"] : ["private"];
   for (const access of tries) {
     try {
       const hit = await get(pathname, { ...auth, access });
@@ -102,15 +104,11 @@ export default async function handler(req, res) {
       }
       if (!size) return res.status(400).json({ error: "Morceau vide" });
 
-      const auth = blobSdkAuthOptions();
-      const access = getMediaBlobAccess();
-      await put(partPath(sessionId, index), Buffer.concat(chunks), {
-        ...auth,
-        access,
-        contentType: "application/octet-stream",
-        addRandomSuffix: false,
-        allowOverwrite: true,
-      });
+      await putMediaBlob(
+        partPath(sessionId, index),
+        Buffer.concat(chunks),
+        "application/octet-stream",
+      );
 
       return res.status(200).json({ ok: true, index, size });
     } catch (err) {
@@ -149,7 +147,6 @@ export default async function handler(req, res) {
 
     try {
       const auth = blobSdkAuthOptions();
-      const preferred = getMediaBlobAccess();
       const buffers = [];
       let sum = 0;
 
@@ -172,27 +169,7 @@ export default async function handler(req, res) {
       }
 
       const buffer = Buffer.concat(buffers);
-      let result;
-      let access = preferred;
-      try {
-        result = await put(pathname, buffer, {
-          ...auth,
-          access: preferred,
-          contentType,
-          addRandomSuffix: false,
-          allowOverwrite: true,
-        });
-      } catch (err) {
-        if (preferred !== "public") throw err;
-        access = "private";
-        result = await put(pathname, buffer, {
-          ...auth,
-          access: "private",
-          contentType,
-          addRandomSuffix: false,
-          allowOverwrite: true,
-        });
-      }
+      const { result, access } = await putMediaBlob(pathname, buffer, contentType);
 
       const url = catalogUrlFromBlobUpload(result, pathname, access);
       const tmpListed = await list({ prefix: tmpPrefix(sessionId), ...auth });

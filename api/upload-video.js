@@ -2,11 +2,9 @@
  * Upload vidéo via le serveur (même origine → pas de CORS vercel.com).
  * Un seul POST (≤ ~3,4 Mo). Vidéos plus lourdes : /api/upload-video-chunk.
  */
-import { put } from "@vercel/blob";
 import { applyApiCors } from "../lib/api-cors.mjs";
 import { requireAdmin } from "../lib/store-server.js";
-import { getMediaBlobAccess } from "../lib/blob-access.mjs";
-import { blobSdkAuthOptions } from "../lib/blob-sdk-auth.mjs";
+import { putMediaBlob } from "../lib/blob-put-media.mjs";
 import { catalogUrlFromBlobUpload } from "../lib/blob-media-url.mjs";
 import { MAX_BLOB_UPLOAD_VIDEO_BYTES } from "../lib/media-limits.mjs";
 
@@ -60,32 +58,9 @@ export default async function handler(req, res) {
     }
 
     const buffer = Buffer.concat(chunks);
-    const auth = blobSdkAuthOptions();
-    const preferred = getMediaBlobAccess();
-
-    let result;
-    let access = preferred;
-    try {
-      result = await put(pathname, buffer, {
-        ...auth,
-        access: preferred,
-        contentType,
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        multipart: buffer.length > 4_500_000,
-      });
-    } catch (err) {
-      if (preferred !== "public") throw err;
-      access = "private";
-      result = await put(pathname, buffer, {
-        ...auth,
-        access: "private",
-        contentType,
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        multipart: buffer.length > 4_500_000,
-      });
-    }
+    const { result, access } = await putMediaBlob(pathname, buffer, contentType, {
+      multipart: buffer.length > 4_500_000,
+    });
 
     const url = catalogUrlFromBlobUpload(result, pathname, access);
     if (!url) {
