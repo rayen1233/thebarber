@@ -850,7 +850,7 @@ function renderDetail(id) {
       setPdHeroBackdropImage(heroBackdrop, poster0);
     }
     void (async () => {
-      const url = await resolveProductVideoUrl(product, { profile: "detail" });
+      const url = await resolveProductVideoUrl(product);
       if (url) {
         if (heroBackdrop) setPdHeroBackdropVideo(heroBackdrop, url, poster0);
         if (mainVisual) setPdMainVisualVideo(mainVisual, url, poster0, true);

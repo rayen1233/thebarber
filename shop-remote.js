@@ -1022,50 +1022,19 @@ function remoteApiBaseForUpload(opts = {}) {
 }
 
 /**
- * Vidéo produit → Cloudinary (URL + poster). Ne jamais stocker le fichier en localStorage.
+ * Vidéo produit → Vercel Blob (URL catalogue /api/media).
  * @param {Blob | File} blob
  * @param {string} [filename]
  * @param {{ baseUrl?: string, adminKey?: string, contentType?: string, productId?: string, onProgress?: (p: { percentage: number }) => void }} [opts]
  * @returns {Promise<{ videoUrl: string, videoPosterUrl: string }>}
  */
 export async function uploadProductVideo(blob, filename = "video.mp4", opts = {}) {
-  const baseUrl = remoteApiBaseForUpload(opts);
-  const key = opts.adminKey || getAdminKey();
-  if (!baseUrl) {
-    throw new Error("URL du site Vercel requise pour envoyer une vidéo depuis localhost.");
-  }
-  if (!key) throw new Error("Clé admin requise pour téléverser des vidéos.");
-
-  if (blob.size > MAX_VIDEO_BYTES) {
-    throw new Error(
-      `Vidéo trop lourde (${(blob.size / (1024 * 1024)).toFixed(1)} Mo). Maximum 20 Mo.`,
-    );
-  }
-
-  const productId = String(opts.productId || "").trim();
-  const q = productId ? `?productId=${encodeURIComponent(productId)}` : "";
-  opts.onProgress?.({ percentage: 0 });
-
-  const res = await fetch(`${baseUrl}/api/cloudinary-video${q}`, {
-    method: "POST",
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "X-Admin-Key": key,
-      "X-Filename": filename,
-      "Content-Type": opts.contentType || blob.type || "video/mp4",
-    },
-    body: blob,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `Upload Cloudinary refusé (${res.status})`);
-  }
-  opts.onProgress?.({ percentage: 100 });
-  const videoUrl = String(data.videoUrl || "").trim();
-  const videoPosterUrl = String(data.posterUrl || data.videoPosterUrl || "").trim();
-  if (!videoUrl) throw new Error("Upload Cloudinary terminé mais URL vidéo vide.");
-  return { videoUrl, videoPosterUrl };
+  const { normalizeVideoUrlForCatalog } = await import("./lib/blob-media-url.mjs");
+  const url = await uploadMediaBlobViaClient(blob, filename, opts);
+  return {
+    videoUrl: normalizeVideoUrlForCatalog(url),
+    videoPosterUrl: "",
+  };
 }
 
 export async function uploadMediaBlob(blob, filename = "upload.bin", opts = {}) {
@@ -1204,7 +1173,7 @@ export async function migrateIdbVideosToRemote(opts) {
     if (blob.size > MAX_REMOTE_VIDEO_BYTES) {
       skipped++;
       opts.onProgress?.(
-        `  → ignoré (${(blob.size / 1024 / 1024).toFixed(1)} Mo, max 20 Mo)`,
+        `  → ignoré (${(blob.size / 1024 / 1024).toFixed(1)} Mo, max ${MAX_REMOTE_VIDEO_BYTES / (1024 * 1024)} Mo)`,
       );
       continue;
     }
@@ -1324,7 +1293,9 @@ export async function pushProductToRemote(product, opts = {}) {
   }
 
   const { saveProducts, getProducts } = await import("./shop-core.js");
-  const { dataUrlToBlob, isIdbVideoRef } = await import("./shop-media-store.js");
+  const { dataUrlToBlob, isIdbVideoRef, idbVideoProductId, getProductVideoBlob } = await import(
+    "./shop-media-store.js"
+  );
 
   let prepared = { ...product };
   const photos = Array.isArray(product.photos) ? product.photos : [];
@@ -1340,16 +1311,26 @@ export async function pushProductToRemote(product, opts = {}) {
 
   const vid = String(prepared.videoUrl || "").trim();
   if (vid.startsWith("data:") && /video|octet-stream/i.test(vid.slice(0, 40))) {
-    opts.onProgress?.("Envoi de la vidéo vers Cloudinary…");
+    opts.onProgress?.("Envoi de la vidéo vers Vercel Blob…");
     const up = await uploadProductVideo(dataUrlToBlob(vid), `${prepared.id || "video"}.mp4`, {
       productId: prepared.id,
     });
     prepared.videoUrl = up.videoUrl;
     prepared.videoPosterUrl = up.videoPosterUrl;
   } else if (isIdbVideoRef(vid)) {
-    throw new Error(
-      "Vidéo encore locale (idb://). Choisissez un fichier vidéo dans le formulaire pour la publier en ligne.",
-    );
+    const blob = await getProductVideoBlob(idbVideoProductId(vid));
+    if (!blob) {
+      throw new Error(
+        "Vidéo locale introuvable dans ce navigateur. Ré-uploadez le fichier vidéo.",
+      );
+    }
+    opts.onProgress?.("Envoi de la vidéo locale vers Vercel Blob…");
+    const up = await uploadProductVideo(blob, `${prepared.id || "video"}.mp4`, {
+      contentType: blob.type || "video/mp4",
+      productId: prepared.id,
+    });
+    prepared.videoUrl = up.videoUrl;
+    prepared.videoPosterUrl = up.videoPosterUrl;
   }
 
   opts.onProgress?.("Publication sur le serveur…");

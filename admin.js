@@ -16,6 +16,7 @@ import {
   isIdbVideoRef,
   idbVideoProductId,
   getProductVideoBlob,
+  putProductVideo,
 } from "./shop-media-store.js";
 import { saveUsers, saveOrders } from "./shop-account-store.js";
 import { initAdminDashboard, refreshAdminDashboard } from "./admin-dashboard.js";
@@ -24,7 +25,7 @@ import {
   parseCatalogImportJson,
   migrateIdbVideosToRemote,
   restoreCatalogMediaFromSource,
-} from "./shop-remote.js?v=20260522-cloudinary";
+} from "./shop-remote.js";
 import {
   getAdminCatalogProducts,
   refreshAdminCatalog,
@@ -378,8 +379,8 @@ function collectPhotos(container) {
 function videoStatusLabel(p) {
   if (!productHasVideo(p)) return "—";
   if (isIdbVideoRef(p.videoUrl)) return "IDB (à migrer)";
-  if (String(p.videoUrl).startsWith("data:")) return "data (refusé)";
-  if (/cloudinary\.com/i.test(String(p.videoUrl))) return "Cloudinary";
+  if (String(p.videoUrl).startsWith("data:")) return "data (inline)";
+  if (/\/api\/media\?|\.blob\.vercel-storage/i.test(String(p.videoUrl))) return "Vercel Blob";
   return "Oui";
 }
 
@@ -621,59 +622,54 @@ function main() {
     if (!f || !(urlInp instanceof HTMLInputElement)) return;
     if (f.size > MAX_VIDEO_BYTES) {
       alert(
-        "Vidéo trop volumineuse (maximum 20 Mo). Compressez en 720p/1080p, utilisez une URL Cloudinary, ou réduisez la durée.",
+        `Vidéo trop volumineuse (maximum ${MAX_VIDEO_BYTES / (1024 * 1024)} Mo). Compressez le fichier ou réduisez la durée.`,
       );
       videoFile.value = "";
       return;
     }
     setAdminStatus("Lecture de la vidéo…");
     try {
-      if ((isRemoteMode() || getAdminKey()) && usesAdminDatabase()) {
-        const { uploadProductVideo } = await import("./shop-remote.js?v=20260522-cloudinary");
-        const { inspectVideoFile } = await import("./lib/cloudinary-client.js");
+      const idInp = document.getElementById("admin-product-id");
+      const productId =
+        idInp instanceof HTMLInputElement && idInp.value.trim()
+          ? idInp.value.trim()
+          : newProductId();
+
+      if ((isRemoteMode() || getAdminKey()) && getAdminKey() && usesAdminDatabase()) {
+        const { uploadProductVideo } = await import("./shop-remote.js");
         const { normalizeVideoUrlForCatalog } = await import("./lib/blob-media-url.mjs");
-        const meta = await inspectVideoFile(f);
-        if (meta.width > 1920 || meta.height > 1080) {
-          setAdminStatus(
-            `Résolution ${meta.width}×${meta.height} — Cloudinary limitera à 1080p à l’envoi.`,
-          );
-        }
-        setAdminStatus("Envoi vers Cloudinary (max 20 Mo)…");
-        const { videoUrl, videoPosterUrl } = await uploadProductVideo(f, f.name || "video.mp4", {
+        setAdminStatus("Envoi vers Vercel Blob…");
+        const { videoUrl } = await uploadProductVideo(f, f.name || "video.mp4", {
+          productId,
           onProgress: (p) => {
             if (p?.percentage != null) {
-              setAdminStatus(`Vidéo Cloudinary : ${Math.round(p.percentage)} %…`);
+              setAdminStatus(`Vidéo Blob : ${Math.round(p.percentage)} %…`);
             }
           },
         });
         urlInp.value = normalizeVideoUrlForCatalog(videoUrl);
         const posterInp = document.getElementById("admin-video-poster-url");
-        if (posterInp instanceof HTMLInputElement) {
-          posterInp.value = normalizeVideoUrlForCatalog(videoPosterUrl);
-        }
+        if (posterInp instanceof HTMLInputElement) posterInp.value = "";
         await refreshAdminVideoPreview(urlInp.value);
         setAdminStatus(
-          "Vidéo sur Cloudinary — cliquez « Enregistrer le produit » pour la publier sur la boutique.",
+          "Vidéo sur Vercel Blob — cliquez « Enregistrer le produit » pour la publier sur la boutique.",
           "error",
         );
-        const idInp = document.getElementById("admin-product-id");
         const isEdit =
           idInp instanceof HTMLInputElement && Boolean(idInp.value.trim());
         const formEl = document.getElementById("admin-form");
-        if (
-          isEdit &&
-          getAdminKey() &&
-          usesAdminDatabase() &&
-          formEl instanceof HTMLFormElement
-        ) {
+        if (isEdit && formEl instanceof HTMLFormElement) {
           setAdminStatus("Vidéo en ligne — enregistrement du produit sur la base…");
           formEl.requestSubmit();
         }
       } else {
-        alert(
-          "Connexion admin requise. Ouvrez l’admin sur thebarber-three.vercel.app et saisissez la clé ADMIN_SECRET — les vidéos ne sont plus stockées en local.",
+        await putProductVideo(productId, f);
+        urlInp.value = `idb://${productId}`;
+        if (idInp instanceof HTMLInputElement && !idInp.value.trim()) idInp.value = productId;
+        await refreshAdminVideoPreview(urlInp.value);
+        setAdminStatus(
+          "Vidéo enregistrée localement (IndexedDB). Enregistrez le produit, puis publiez sur Vercel pour la mettre en ligne.",
         );
-        videoFile.value = "";
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Lecture vidéo impossible.");
