@@ -811,10 +811,13 @@ function main() {
           renderTable();
           const skipNote =
             skipped > 0 ? ` (${skipped} ignorée(s))` : "";
+          const warn = out.warning ? `\n\n${out.warning}` : "";
           setAdminStatus(
             `Import terminé : ${out.productCount} produit(s) en base${skipNote}.`,
+            "",
           );
           setRemoteBannerStatus("Catalogue en ligne à jour.");
+          if (out.warning) alert(`Import terminé avec avertissements.${warn}`);
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Import impossible.";
           setAdminStatus(msg, "error");

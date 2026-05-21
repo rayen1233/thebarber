@@ -53,13 +53,14 @@ function prepareStoreForWrite(data) {
 }
 
 async function verifySavedCount(expected) {
-  for (let attempt = 0; attempt < 4; attempt++) {
+  const waits = [0, 400, 900, 1600, 2800];
+  for (let attempt = 0; attempt < waits.length; attempt++) {
+    if (waits[attempt] > 0) {
+      await new Promise((r) => setTimeout(r, waits[attempt]));
+    }
     const loaded = await loadStore();
     const n = loaded.products.length;
     if (n >= expected) return n;
-    if (attempt < 3) {
-      await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
-    }
   }
   const loaded = await loadStore();
   return loaded.products.length;
@@ -126,8 +127,10 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         deleted: had,
+        deletedId: id,
         productCount: saved.products.length,
         verifiedCount,
+        products: saved.products,
       });
     } catch (err) {
       console.error("[store] DELETE failed", err);
@@ -165,10 +168,15 @@ export default async function handler(req, res) {
         : await saveStore(payload);
       const verifiedCount = await verifySavedCount(saved.products.length);
       if (saved.products.length > 0 && verifiedCount === 0) {
+        console.error(
+          "[store] verify mismatch after save",
+          saved.products.length,
+          "expected, read 0",
+        );
         return res.status(500).json({
           error:
-            "Écriture Blob échouée (lecture après sauvegarde = 0 produit). Vérifiez thebarber-blob sur Vercel.",
-          productCount: 0,
+            "Écriture Blob : sauvegarde OK mais relecture vide. Redeploy avec la dernière version, ou réessayez dans 10 s.",
+          productCount: saved.products.length,
           verifiedCount: 0,
         });
       }
@@ -176,6 +184,7 @@ export default async function handler(req, res) {
         ok: true,
         productCount: saved.products.length,
         verifiedCount,
+        products: saved.products,
       });
     } catch (err) {
       console.error("[store] save failed", err);

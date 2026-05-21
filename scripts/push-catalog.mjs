@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
 import { uploadInlinePhotosInProducts } from "../lib/catalog-media.mjs";
+import { leanProductsForServer } from "../lib/store-payload.mjs";
 
 const file = process.argv[2];
 const secretArg = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : "";
@@ -184,10 +185,20 @@ const failed = [];
 for (let i = 0; i < leanProducts.length; i++) {
   const name = leanProducts[i]?.name || `produit ${i + 1}`;
   console.log(`Catalogue ${i + 1}/${leanProducts.length} — ${String(name).slice(0, 50)}…`);
+  const row = leanProducts[i];
+  const normalized = leanProductsForServer([row]);
+  if (!normalized.length) {
+    failed.push({
+      name,
+      error: "Produit rejeté (nom, description, prix ou photos data: invalides)",
+    });
+    console.error(`  → échec : produit non enregistrable côté serveur`);
+    continue;
+  }
   try {
     count = await putMerge({
       merge: true,
-      products: [leanProducts[i]],
+      products: [normalized[0]],
       users: i === 0 && Array.isArray(raw.users) ? raw.users : [],
       orders: i === 0 && Array.isArray(raw.orders) ? raw.orders : [],
     });

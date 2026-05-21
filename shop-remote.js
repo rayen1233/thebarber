@@ -295,13 +295,19 @@ export async function uploadInlinePhotosInProducts(products, upload, onProgress)
     for (let j = 0; j < photos.length; j++) {
       const raw = String(photos[j] || "");
       if (raw.startsWith("data:image")) {
-        try {
-          const url = await upload(dataUrlToBlob(raw), `p-${row.id || i}-${j}.jpg`);
-          nextPhotos.push(url);
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          if (/unauthorized|401/i.test(msg)) throw err;
+        let url = "";
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            url = await upload(dataUrlToBlob(raw), `p-${row.id || i}-${j}.jpg`);
+            break;
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (/unauthorized|401/i.test(msg)) throw err;
+            if (attempt === 2) console.warn("[thebarber] photo upload failed", row.id, j, msg);
+            else await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+          }
         }
+        if (url) nextPhotos.push(url);
       } else {
         nextPhotos.push(raw);
       }
