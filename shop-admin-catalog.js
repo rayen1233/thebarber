@@ -329,13 +329,33 @@ export async function adminSaveProduct(product, opts = {}) {
     prepared = uploaded[0] || prepared;
   }
   const vid = String(prepared.videoUrl || "").trim();
+  const { normalizeVideoUrlForCatalog } = await import("./lib/blob-media-url.mjs");
   if (vid.startsWith("data:")) {
     opts.onProgress?.("Envoi vidéo…");
-    prepared.videoUrl = await uploadMediaBlob(
+    const uploaded = await uploadMediaBlob(
       dataUrlToBlob(vid),
       `${prepared.id}.mp4`,
       { contentType: "video/mp4" },
     );
+    prepared.videoUrl = normalizeVideoUrlForCatalog(uploaded);
+  } else {
+    const { isIdbVideoRef, idbVideoProductId, getProductVideoBlob } = await import(
+      "./shop-media-store.js",
+    );
+    if (isIdbVideoRef(vid)) {
+      opts.onProgress?.("Publication vidéo locale vers Blob…");
+      const blob = await getProductVideoBlob(idbVideoProductId(vid));
+      if (blob) {
+        const uploaded = await uploadMediaBlob(blob, `${prepared.id}.mp4`, {
+          contentType: blob.type || "video/mp4",
+        });
+        prepared.videoUrl = normalizeVideoUrlForCatalog(uploaded);
+      } else {
+        prepared.videoUrl = "";
+      }
+    } else {
+      prepared.videoUrl = normalizeVideoUrlForCatalog(vid);
+    }
   }
 
   if (!usesAdminDatabase()) {

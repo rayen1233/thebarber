@@ -84,6 +84,16 @@
                   placeholder="https://… ou public/video.mp4"
                 />
                 <input type="file" id="admin-video-file" accept="video/*" style="margin-top: 0.5rem" />
+                <div id="admin-video-preview-wrap" hidden style="margin-top: 0.65rem">
+                  <video
+                    id="admin-video-preview"
+                    controls
+                    playsinline
+                    preload="metadata"
+                    style="max-width: 100%; max-height: 220px; border: 1px solid rgba(201, 162, 39, 0.25)"
+                  ></video>
+                  <p id="admin-video-preview-label" style="margin: 0.35rem 0 0; font-size: 0.72rem; color: var(--shop-muted)"></p>
+                </div>
 
                 <label>Photos (minimum 1)</label>
                 <p style="margin: 0 0 0.5rem; font-size: 0.78rem; color: var(--shop-muted); line-height: 1.45">
@@ -247,7 +257,7 @@
       </main>
     </div>
     <script type="module" src="./barber-theme.js"></script>
-    <script type="module" src="./shop-admin-catalog.js?v=20260521-import4"></script>
-    <script type="module" src="./admin.js?v=20260523-import2"></script>
+    <script type="module" src="./shop-admin-catalog.js?v=20260521-video1"></script>
+    <script type="module" src="./admin.js?v=20260521-video1"></script>
   </body>
 </html>

@@ -56,8 +56,12 @@ export default async function handler(req, res) {
     }
 
     const buf = await streamToBuffer(hit.stream);
-    const type = hit.blob?.contentType || "application/octet-stream";
+    let type = hit.blob?.contentType || "application/octet-stream";
+    if (/octet-stream/i.test(type) && /\.(mp4|webm|mov|m4v)$/i.test(pathname)) {
+      type = "video/mp4";
+    }
     res.setHeader("Content-Type", type);
+    res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
     if (req.method === "HEAD") {
       res.setHeader("Content-Length", String(buf.length));

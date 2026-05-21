@@ -762,10 +762,7 @@ function mediaPathnameForUpload(filename, blob, fallbackId = "") {
  * @param {{ baseUrl?: string, adminKey?: string, contentType?: string, onProgress?: (p: { percentage: number }) => void }} [opts]
  */
 async function uploadMediaBlobViaClient(blob, filename, opts = {}) {
-  const baseUrl = (
-    opts.baseUrl ||
-    (typeof window !== "undefined" && usesRemoteCatalog() ? getRemoteApiBase() : "")
-  ).replace(/\/$/, "");
+  const baseUrl = remoteApiBaseForUpload(opts);
   const key = opts.adminKey || getAdminKey();
   if (!baseUrl) throw new Error("URL du site Vercel requise.");
   if (!key) throw new Error("Clé admin requise.");
@@ -776,7 +773,12 @@ async function uploadMediaBlobViaClient(blob, filename, opts = {}) {
     );
   }
 
-  const { upload } = await import("https://esm.sh/@vercel/blob@2.4.0/client");
+  let upload;
+  try {
+    ({ upload } = await import("https://cdn.jsdelivr.net/npm/@vercel/blob@2.4.0/+esm"));
+  } catch {
+    ({ upload } = await import("https://esm.sh/@vercel/blob@2.4.0/client"));
+  }
   const pathname = mediaPathnameForUpload(filename, blob);
   const headers = {
     Authorization: `Bearer ${key}`,
@@ -801,18 +803,27 @@ async function uploadMediaBlobViaClient(blob, filename, opts = {}) {
     access = "private";
   }
 
-  return catalogUrlFromBlobUpload(
+  const catalogUrl = catalogUrlFromBlobUpload(
     result,
     String(result.pathname || pathname),
     access,
   );
+  if (!catalogUrl) {
+    throw new Error("Upload vidéo terminé mais URL catalogue vide — vérifiez BLOB_READ_WRITE_TOKEN sur Vercel.");
+  }
+  return catalogUrl;
+}
+
+function remoteApiBaseForUpload(opts = {}) {
+  if (opts.baseUrl) return String(opts.baseUrl).replace(/\/$/, "");
+  if (typeof window === "undefined") return "";
+  if (isRemoteMode()) return window.location.origin.replace(/\/$/, "");
+  if (getAdminKey() && getRemoteApiBase()) return getRemoteApiBase();
+  return "";
 }
 
 export async function uploadMediaBlob(blob, filename = "upload.bin", opts = {}) {
-  const baseUrl = (
-    opts.baseUrl ||
-    (typeof window !== "undefined" && usesRemoteCatalog() ? getRemoteApiBase() : "")
-  ).replace(/\/$/, "");
+  const baseUrl = remoteApiBaseForUpload(opts);
   const key = opts.adminKey || getAdminKey();
   if (!baseUrl) {
     throw new Error("URL du site Vercel requise pour envoyer une vidéo depuis localhost.");

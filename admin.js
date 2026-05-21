@@ -14,6 +14,8 @@ import {
   migrateCatalogVideosToIdb,
   productHasVideo,
   isIdbVideoRef,
+  idbVideoProductId,
+  getProductVideoObjectUrl,
 } from "./shop-media-store.js";
 import { saveUsers, saveOrders } from "./shop-account-store.js";
 import { initAdminDashboard } from "./admin-dashboard.js";
@@ -379,6 +381,42 @@ function videoStatusLabel(p) {
   return "Oui";
 }
 
+/** @param {string} rawUrl */
+async function refreshAdminVideoPreview(rawUrl) {
+  const wrap = document.getElementById("admin-video-preview-wrap");
+  const video = document.getElementById("admin-video-preview");
+  const label = document.getElementById("admin-video-preview-label");
+  if (!(wrap instanceof HTMLElement) || !(video instanceof HTMLVideoElement)) return;
+
+  const trimmed = String(rawUrl || "").trim();
+  if (!trimmed) {
+    wrap.hidden = true;
+    video.removeAttribute("src");
+    video.load();
+    if (label) label.textContent = "";
+    return;
+  }
+
+  let src = trimmed;
+  if (isIdbVideoRef(trimmed)) {
+    const id = idbVideoProductId(trimmed);
+    src = (await getProductVideoObjectUrl(id)) || "";
+    if (!src) {
+      wrap.hidden = true;
+      if (label) label.textContent = "Vidéo locale — choisissez un fichier pour publier en ligne.";
+      return;
+    }
+    if (label) label.textContent = "Aperçu (stockage local)";
+  } else {
+    src = resolveShopMediaUrl(trimmed) || trimmed;
+    if (label) label.textContent = "Aperçu vidéo";
+  }
+
+  wrap.hidden = false;
+  video.src = src;
+  video.load();
+}
+
 /**
  * @param {import("./shop-core.js").Product} p
  */
@@ -415,6 +453,7 @@ async function loadProductIntoForm(p) {
     } else {
       ve.value = p.videoUrl || "";
     }
+    void refreshAdminVideoPreview(ve.value);
   }
 
   const ph = document.getElementById("admin-photos");
@@ -514,6 +553,7 @@ function resetForm() {
   }
   const ve = document.getElementById("admin-video-url");
   if (ve) ve.value = "";
+  void refreshAdminVideoPreview("");
   const vf = document.getElementById("admin-video-file");
   if (vf) vf.value = "";
   setAdminStatus("");
@@ -563,6 +603,11 @@ function main() {
     setAdminStatus(ok ? `${ok} image(s) importée(s). Vérifiez les aperçus puis enregistrez.` : "Aucune image valide sélectionnée.");
   });
 
+  document.getElementById("admin-video-url")?.addEventListener("input", (e) => {
+    const el = e.target;
+    if (el instanceof HTMLInputElement) void refreshAdminVideoPreview(el.value);
+  });
+
   videoFile?.addEventListener("change", async () => {
     const f = videoFile.files && videoFile.files[0];
     const urlInp = document.getElementById("admin-video-url");
@@ -579,6 +624,7 @@ function main() {
       if ((isRemoteMode() || getAdminKey()) && usesAdminDatabase()) {
         const { uploadMediaBlob } = await import("./shop-remote.js");
         setAdminStatus("Envoi de la vidéo vers Vercel (max 10 Mo)…");
+        const { normalizeVideoUrlForCatalog } = await import("./lib/blob-media-url.mjs");
         const url = await uploadMediaBlob(f, f.name || "video.mp4", {
           onProgress: (p) => {
             if (p?.percentage != null) {
@@ -586,11 +632,15 @@ function main() {
             }
           },
         });
-        urlInp.value = url;
-        setAdminStatus("Vidéo hébergée sur Vercel Blob.");
+        urlInp.value = normalizeVideoUrlForCatalog(url);
+        await refreshAdminVideoPreview(urlInp.value);
+        setAdminStatus(
+          `Vidéo prête — enregistrez le produit pour la sauver (${urlInp.value.slice(0, 48)}…).`,
+        );
       } else {
         urlInp.value = await readFileAsDataUrl(f);
-        setAdminStatus("Vidéo intégrée (données locales). Si l’enregistrement échoue, utilisez une URL.");
+        await refreshAdminVideoPreview(urlInp.value);
+        setAdminStatus("Vidéo intégrée (données locales). Cliquez Enregistrer le produit.");
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Lecture vidéo impossible.");

@@ -3,6 +3,7 @@
  */
 
 import { getProducts, saveProducts, resolveShopMediaUrl } from "./shop-core.js";
+import { normalizeVideoUrlForCatalog } from "./lib/blob-media-url.mjs";
 
 const DB_NAME = "thebarber_media_v1";
 const DB_VERSION = 1;
@@ -162,12 +163,14 @@ export async function persistProductVideoRef(productId, videoUrl) {
   if (isIdbVideoRef(trimmed)) return trimmed;
   if (trimmed.startsWith("data:") && /video|octet-stream/i.test(trimmed.slice(0, 40))) {
     try {
-      const { isRemoteMode, uploadMediaFile, getAdminKey } = await import(
+      const { usesRemoteCatalog, uploadMediaBlob, getAdminKey } = await import(
         "./shop-remote.js"
       );
-      if (isRemoteMode() && getAdminKey()) {
-        const url = await uploadMediaFile(dataUrlToBlob(trimmed), `${productId}.mp4`);
-        if (url) return url;
+      if (usesRemoteCatalog() && getAdminKey()) {
+        const url = await uploadMediaBlob(dataUrlToBlob(trimmed), `${productId}.mp4`, {
+          contentType: "video/mp4",
+        });
+        if (url) return normalizeVideoUrlForCatalog(url);
       }
     } catch (err) {
       console.warn("[thebarber] video upload failed, fallback IDB", err);
@@ -175,7 +178,7 @@ export async function persistProductVideoRef(productId, videoUrl) {
     await putProductVideo(productId, trimmed);
     return `idb://${productId}`;
   }
-  return resolveShopMediaUrl(trimmed);
+  return normalizeVideoUrlForCatalog(trimmed);
 }
 
 /**
