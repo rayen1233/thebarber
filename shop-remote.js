@@ -19,6 +19,12 @@ import {
   loadStoreSnapshotIdb,
   clearStoreSnapshotIdb,
 } from "./shop-store-idb.js";
+import {
+  MAX_VIDEO_BYTES,
+  MAX_IMAGE_UPLOAD_BYTES,
+  CLIENT_UPLOAD_THRESHOLD_BYTES,
+} from "./lib/media-limits.js";
+import { catalogUrlFromBlobUpload } from "./lib/blob-media-url.mjs";
 
 const ADMIN_KEY_SESSION = "thebarber_admin_key_v1";
 const REMOTE_API_BASE_SESSION = "thebarber_remote_api_base_v1";
@@ -685,15 +691,13 @@ async function blobToBase64(blob) {
  * @param {string} [filename]
  * @param {{ baseUrl?: string, adminKey?: string, contentType?: string }} [opts]
  */
-const MAX_UPLOAD_BYTES = 3_000_000;
-
 /**
  * Réduit les JPEG/PNG avant POST /api/upload (limite corps ~4.5 Mo sur Vercel).
  * @param {Blob} blob
  */
 async function compressImageBlobForUpload(blob) {
   const type = String(blob.type || "");
-  if (!type.startsWith("image/") || blob.size <= MAX_UPLOAD_BYTES) return blob;
+  if (!type.startsWith("image/") || blob.size <= MAX_IMAGE_UPLOAD_BYTES) return blob;
   if (typeof createImageBitmap !== "function" || typeof document === "undefined") {
     return blob;
   }
@@ -720,7 +724,7 @@ async function compressImageBlobForUpload(blob) {
       ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL("image/jpeg", quality);
       const bytes = (dataUrl.length * 3) / 4;
-      if (bytes <= MAX_UPLOAD_BYTES) {
+      if (bytes <= MAX_IMAGE_UPLOAD_BYTES) {
         const res = await fetch(dataUrl);
         return await res.blob();
       }
@@ -734,6 +738,76 @@ async function compressImageBlobForUpload(blob) {
   }
 }
 
+function mediaPathnameForUpload(filename, blob, fallbackId = "") {
+  const name = String(filename || "").trim();
+  const extFromName = name.includes(".") ? name.split(".").pop() : "";
+  const type = String(blob.type || "");
+  const extFromType = type.includes("video")
+    ? "mp4"
+    : type.includes("png")
+      ? "png"
+      : type.includes("webp")
+        ? "webp"
+        : "jpg";
+  const ext = String(extFromName || extFromType)
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(0, 8) || "bin";
+  return `thebarber/media/${Date.now()}-${fallbackId || Math.random().toString(36).slice(2, 9)}.${ext}`;
+}
+
+/**
+ * Vidéos / gros fichiers : upload direct navigateur → Blob (max 10 Mo).
+ * @param {Blob | File} blob
+ * @param {string} filename
+ * @param {{ baseUrl?: string, adminKey?: string, contentType?: string, onProgress?: (p: { percentage: number }) => void }} [opts]
+ */
+async function uploadMediaBlobViaClient(blob, filename, opts = {}) {
+  const baseUrl = (
+    opts.baseUrl ||
+    (typeof window !== "undefined" && usesRemoteCatalog() ? getRemoteApiBase() : "")
+  ).replace(/\/$/, "");
+  const key = opts.adminKey || getAdminKey();
+  if (!baseUrl) throw new Error("URL du site Vercel requise.");
+  if (!key) throw new Error("Clé admin requise.");
+
+  if (blob.size > MAX_VIDEO_BYTES) {
+    throw new Error(
+      `Fichier trop lourd (${(blob.size / (1024 * 1024)).toFixed(1)} Mo). Maximum 10 Mo pour les vidéos.`,
+    );
+  }
+
+  const { upload } = await import("https://esm.sh/@vercel/blob@2.4.0/client");
+  const pathname = mediaPathnameForUpload(filename, blob);
+  const headers = {
+    Authorization: `Bearer ${key}`,
+    "X-Admin-Key": key,
+  };
+  const baseOpts = {
+    handleUploadUrl: `${baseUrl}/api/upload-client`,
+    headers,
+    contentType: opts.contentType || blob.type || "application/octet-stream",
+    multipart: blob.size > 4_500_000,
+    onUploadProgress: opts.onProgress,
+  };
+
+  let result;
+  let access = "public";
+  try {
+    result = await upload(pathname, blob, { ...baseOpts, access: "public" });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!/access|forbidden|private|BlobAccess/i.test(msg)) throw err;
+    result = await upload(pathname, blob, { ...baseOpts, access: "private" });
+    access = "private";
+  }
+
+  return catalogUrlFromBlobUpload(
+    result,
+    String(result.pathname || pathname),
+    access,
+  );
+}
+
 export async function uploadMediaBlob(blob, filename = "upload.bin", opts = {}) {
   const baseUrl = (
     opts.baseUrl ||
@@ -744,14 +818,17 @@ export async function uploadMediaBlob(blob, filename = "upload.bin", opts = {}) 
     throw new Error("URL du site Vercel requise pour envoyer une vidéo depuis localhost.");
   }
   if (!key) throw new Error("Clé admin requise pour téléverser des médias.");
+
+  const isVideo =
+    /^video\//i.test(String(blob.type || "")) ||
+    /\.(mp4|webm|mov|m4v|mkv)$/i.test(String(filename || ""));
+  if (isVideo || blob.size > CLIENT_UPLOAD_THRESHOLD_BYTES) {
+    return uploadMediaBlobViaClient(blob, filename, opts);
+  }
+
   let payload = blob;
   if (String(blob.type || "").startsWith("image/")) {
     payload = await compressImageBlobForUpload(blob);
-  }
-  if (payload.size > MAX_UPLOAD_BYTES && !String(blob.type || "").startsWith("image/")) {
-    throw new Error(
-      `Fichier trop lourd (${Math.round(payload.size / 1e6)} Mo). Maximum ~3 Mo pour l’upload.`,
-    );
   }
   const dataBase64 = await blobToBase64(payload);
   const res = await fetch(`${baseUrl}/api/upload`, {
@@ -810,7 +887,8 @@ export async function pushStoreToBase(baseUrl, adminKey, payload) {
   return { ok: true };
 }
 
-const MAX_REMOTE_VIDEO_BYTES = 11_500_000;
+/** @deprecated use MAX_VIDEO_BYTES */
+const MAX_REMOTE_VIDEO_BYTES = MAX_VIDEO_BYTES;
 
 /**
  * Upload IndexedDB videos to Vercel Blob and update catalog on server.

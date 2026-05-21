@@ -5,10 +5,11 @@ import { readJsonBody } from "../lib/read-json-body.mjs";
 import { requireAdmin } from "../lib/store-server.js";
 import { blobSdkAuthOptions } from "../lib/blob-sdk-auth.mjs";
 import { catalogUrlFromBlobUpload } from "../lib/blob-media-url.mjs";
+import { MAX_IMAGE_UPLOAD_BYTES } from "../lib/media-limits.mjs";
 
-/** Corps JSON max (~4.5 Mo limite Vercel) — base64 grossit ~33 %. */
+/** Corps JSON max (~4.5 Mo limite Vercel) — base64 grossit ~33 %. Vidéos : /api/upload-client */
 const MAX_JSON_BODY_CHARS = 5_800_000;
-const MAX_RAW_BYTES = 4_200_000;
+const MAX_RAW_BYTES = MAX_IMAGE_UPLOAD_BYTES + 200_000;
 
 export const config = {
   api: {
@@ -86,7 +87,9 @@ export default async function handler(req, res) {
     if (dataBase64.length > MAX_JSON_BODY_CHARS) {
       return res.status(413).json({
         error:
-          "Fichier trop lourd pour l’API (max ~3 Mo). Réduisez la résolution ou la qualité JPEG avant envoi.",
+          contentType.includes("video") || filename.match(/\.(mp4|webm|mov|m4v)$/i)
+            ? "Vidéo trop lourde pour cette route : utilisez l’import fichier vidéo dans l’admin (upload direct, max 10 Mo)."
+            : "Fichier trop lourd pour l’API (max ~3 Mo). Réduisez la résolution ou la qualité JPEG avant envoi.",
       });
     }
 
@@ -95,8 +98,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Empty file" });
     }
     if (buffer.length > MAX_RAW_BYTES) {
+      const isVideo = /video/i.test(contentType) || /\.(mp4|webm|mov|m4v)$/i.test(filename);
       return res.status(413).json({
-        error: `Fichier trop lourd (${Math.round(buffer.length / 1e6)} Mo). Maximum ~3 Mo.`,
+        error: isVideo
+          ? `Vidéo trop lourde (${(buffer.length / (1024 * 1024)).toFixed(1)} Mo). Maximum 10 Mo via l’admin (upload direct).`
+          : `Fichier trop lourd (${(buffer.length / (1024 * 1024)).toFixed(1)} Mo). Maximum ~3 Mo pour les images.`,
       });
     }
 

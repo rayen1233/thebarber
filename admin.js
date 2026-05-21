@@ -38,6 +38,7 @@ import {
   setAdminKey,
   isRemoteMode,
 } from "./shop-admin-catalog.js";
+import { MAX_VIDEO_BYTES } from "./lib/media-limits.js";
 
 function escapeHtml(s) {
   return String(s)
@@ -55,8 +56,6 @@ function readFileAsDataUrl(file) {
     r.readAsDataURL(file);
   });
 }
-
-const MAX_VIDEO_BYTES = 6_000_000;
 
 /** @type {Map<string, string>} */
 const photoRowDataCache = new Map();
@@ -568,18 +567,25 @@ function main() {
     const f = videoFile.files && videoFile.files[0];
     const urlInp = document.getElementById("admin-video-url");
     if (!f || !(urlInp instanceof HTMLInputElement)) return;
-    if (f.size > MAX_VIDEO_BYTES && !isRemoteMode()) {
+    if (f.size > MAX_VIDEO_BYTES) {
       alert(
-        "Vidéo trop volumineuse (max ~6 Mo pour le stockage local). Compressez la vidéo ou indiquez une URL hébergée.",
+        "Vidéo trop volumineuse (maximum 10 Mo). Compressez la vidéo, utilisez une URL externe, ou réduisez la durée.",
       );
       videoFile.value = "";
       return;
     }
     setAdminStatus("Lecture de la vidéo…");
     try {
-      if (isRemoteMode() && getAdminKey()) {
-        const { uploadMediaFile } = await import("./shop-remote.js");
-        const url = await uploadMediaFile(f, f.name || "video.mp4");
+      if ((isRemoteMode() || getAdminKey()) && usesAdminDatabase()) {
+        const { uploadMediaBlob } = await import("./shop-remote.js");
+        setAdminStatus("Envoi de la vidéo vers Vercel (max 10 Mo)…");
+        const url = await uploadMediaBlob(f, f.name || "video.mp4", {
+          onProgress: (p) => {
+            if (p?.percentage != null) {
+              setAdminStatus(`Vidéo : ${Math.round(p.percentage)} %…`);
+            }
+          },
+        });
         urlInp.value = url;
         setAdminStatus("Vidéo hébergée sur Vercel Blob.");
       } else {
