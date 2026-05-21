@@ -179,15 +179,32 @@ if (skipImages) {
 }
 
 let count = 0;
+let ok = 0;
+const failed = [];
 for (let i = 0; i < leanProducts.length; i++) {
   const name = leanProducts[i]?.name || `produit ${i + 1}`;
   console.log(`Catalogue ${i + 1}/${leanProducts.length} — ${String(name).slice(0, 50)}…`);
-  count = await putMerge({
-    merge: true,
-    products: [leanProducts[i]],
-    users: i === 0 && Array.isArray(raw.users) ? raw.users : [],
-    orders: i === 0 && Array.isArray(raw.orders) ? raw.orders : [],
-  });
+  try {
+    count = await putMerge({
+      merge: true,
+      products: [leanProducts[i]],
+      users: i === 0 && Array.isArray(raw.users) ? raw.users : [],
+      orders: i === 0 && Array.isArray(raw.orders) ? raw.orders : [],
+    });
+    ok++;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    failed.push({ name, error: msg });
+    console.error(`  → échec : ${msg}`);
+  }
+}
+
+if (failed.length) {
+  console.error(`\nImport partiel : ${ok}/${leanProducts.length} produit(s).`);
+  for (const f of failed.slice(0, 8)) {
+    console.error(`  - ${f.name}: ${f.error}`);
+  }
+  process.exit(1);
 }
 
 console.log("OK —", count, "produit(s) sur le serveur.");

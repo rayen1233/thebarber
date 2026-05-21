@@ -346,13 +346,20 @@ export async function adminReplaceCatalog(products, extra = {}, opts = {}) {
 
   if (hasInline) {
     opts.onProgress?.("Envoi des images vers Blob…");
-    prepared = /** @type {import("./shop-core.js").Product[]} */ (
-      await uploadInlinePhotosInProducts(
-        prepared,
-        (blob, name) => uploadMediaBlob(blob, name),
-        opts.onProgress,
-      )
-    );
+    try {
+      prepared = /** @type {import("./shop-core.js").Product[]} */ (
+        await uploadInlinePhotosInProducts(
+          prepared,
+          (blob, name) => uploadMediaBlob(blob, name),
+          opts.onProgress,
+        )
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/unauthorized|401/i.test(msg)) throw err;
+      opts.onProgress?.("Photos partiellement envoyées — import avec placeholders…");
+      console.warn("[admin-catalog] upload photos partiel", err);
+    }
   }
 
   prepared = /** @type {import("./shop-core.js").Product[]} */ (
@@ -366,29 +373,68 @@ export async function adminReplaceCatalog(products, extra = {}, opts = {}) {
     .map((p) => (p && typeof p === "object" ? String(/** @type {{ id?: string }} */ (p).id || "") : ""))
     .filter((id) => id && !newIds.has(id));
 
-  for (let i = 0; i < toDelete.length; i += DELETE_CHUNK) {
-    const chunk = toDelete.slice(i, i + DELETE_CHUNK);
-    opts.onProgress?.(`Retrait anciens produits (${Math.min(i + DELETE_CHUNK, toDelete.length)}/${toDelete.length})…`);
-    await storeMergePut({
-      merge: true,
-      deletedProductIds: chunk,
-      products: [],
-      users: [],
-      orders: [],
-    });
-  }
-
+  /** @type {{ name: string, error: string }[]} */
+  const failures = [];
+  let imported = 0;
   let lastCount = 0;
+
   for (let i = 0; i < prepared.length; i++) {
     const p = prepared[i];
-    opts.onProgress?.(`Import produit ${i + 1}/${prepared.length} — ${String(p.name || "").slice(0, 40)}…`);
-    const data = await adminCatalogFetch("", {
-      method: "POST",
-      body: JSON.stringify({ product: p }),
-    });
-    lastCount = data.productCount ?? lastCount;
-    if (Array.isArray(data.products)) {
-      applyCatalogToAdmin(data.products);
+    const label = String(p.name || `produit ${i + 1}`).slice(0, 40);
+    opts.onProgress?.(`Import produit ${i + 1}/${prepared.length} — ${label}…`);
+    try {
+      const data = await adminCatalogFetch("", {
+        method: "POST",
+        body: JSON.stringify({ product: p }),
+      });
+      imported++;
+      lastCount = data.productCount ?? lastCount;
+      if (Array.isArray(data.products)) {
+        applyCatalogToAdmin(data.products);
+      }
+    } catch (postErr) {
+      const postMsg = postErr instanceof Error ? postErr.message : String(postErr);
+      try {
+        const data = await storeMergePut({
+          merge: true,
+          products: [p],
+          users: [],
+          orders: [],
+        });
+        imported++;
+        lastCount = data.productCount ?? lastCount;
+        if (Array.isArray(data.products)) {
+          applyCatalogToAdmin(data.products);
+        }
+      } catch (mergeErr) {
+        const mergeMsg = mergeErr instanceof Error ? mergeErr.message : String(mergeErr);
+        failures.push({
+          name: label,
+          error: mergeMsg || postMsg || "échec",
+        });
+        opts.onProgress?.(`  → échec : ${label} — ${mergeMsg || postMsg}`);
+      }
+    }
+  }
+
+  if (toDelete.length) {
+    for (let i = 0; i < toDelete.length; i += DELETE_CHUNK) {
+      const chunk = toDelete.slice(i, i + DELETE_CHUNK);
+      opts.onProgress?.(
+        `Retrait anciens produits (${Math.min(i + DELETE_CHUNK, toDelete.length)}/${toDelete.length})…`,
+      );
+      try {
+        await storeMergePut({
+          merge: true,
+          deletedProductIds: chunk,
+          products: [],
+          users: [],
+          orders: [],
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        failures.push({ name: "(nettoyage catalogue)", error: msg });
+      }
     }
   }
 
@@ -402,7 +448,18 @@ export async function adminReplaceCatalog(products, extra = {}, opts = {}) {
   }
 
   await refreshAdminCatalog();
-  return { productCount: lastCount || adminCatalog.length };
+  const productCount = lastCount || adminCatalog.length;
+  if (failures.length) {
+    const summary = failures
+      .slice(0, 5)
+      .map((f) => `${f.name}: ${f.error}`)
+      .join("\n");
+    const more = failures.length > 5 ? `\n… et ${failures.length - 5} autre(s).` : "";
+    throw new Error(
+      `Import partiel : ${imported}/${prepared.length} produit(s) en base.\n\n${summary}${more}`,
+    );
+  }
+  return { productCount, imported, failed: 0, errors: [] };
 }
 
 export function onAdminCatalogUpdated(fn) {
