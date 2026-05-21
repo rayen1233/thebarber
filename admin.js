@@ -30,6 +30,11 @@ import {
   fetchRemoteStoreMeta,
   pushProductToRemote,
   deleteProductFromRemote,
+  replaceRemoteCatalog,
+  usesRemoteCatalog,
+  getRemoteApiBase,
+  setRemoteApiBase,
+  DEFAULT_REMOTE_API_BASE,
 } from "./shop-remote.js";
 import { setProductsMemoryCache } from "./shop-core.js";
 
@@ -463,13 +468,15 @@ function renderTable() {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
       if (!id || !confirm("Supprimer ce produit ?")) return;
-      if (!isRemoteMode()) {
+      await ensureAdminRemoteKey();
+      if (!usesRemoteCatalog()) {
         deleteProduct(id);
         renderTable();
-        setAdminStatus("Produit supprimé.");
+        setAdminStatus(
+          "Produit supprimé localement uniquement. Saisissez la clé admin pour supprimer sur Vercel.",
+        );
         return;
       }
-      await ensureAdminRemoteKey();
       if (!getAdminKey()) {
         setAdminStatus("Clé admin requise pour supprimer sur le serveur.", "error");
         return;
@@ -623,19 +630,26 @@ function main() {
     }
 
     const finishSave = async (product) => {
-      if (isRemoteMode() && getAdminKey()) {
+      await ensureAdminRemoteKey();
+      if (usesRemoteCatalog()) {
         setAdminStatus("Publication sur Vercel…");
-        await pushProductToRemote(product, { onProgress: (msg) => setAdminStatus(msg) });
+        const out = await pushProductToRemote(product, { onProgress: (msg) => setAdminStatus(msg) });
+        if (!out.ok) throw new Error(out.error || "Publication impossible.");
       } else {
-        upsertProduct(product, { skipRemoteSync: isRemoteMode() });
+        upsertProduct(product, { skipRemoteSync: true });
       }
       renderTable();
       resetForm();
-      setAdminStatus("Produit enregistré et publié sur le site.");
+      setAdminStatus(
+        usesRemoteCatalog()
+          ? "Produit enregistré dans la base Vercel."
+          : "Produit enregistré localement. Saisissez la clé admin pour publier sur Vercel.",
+      );
+      void initRemoteSyncBanner();
     };
 
     try {
-      if (isRemoteMode() && getAdminKey()) {
+      if (usesRemoteCatalog()) {
         await finishSave(v.product);
         return;
       }
@@ -775,15 +789,16 @@ function main() {
         )
       )
         return;
-      if (isRemoteMode()) {
-        await ensureAdminRemoteKey();
+      await ensureAdminRemoteKey();
+      if (usesRemoteCatalog()) {
         if (!getAdminKey()) {
           alert("Clé admin requise (ADMIN_SECRET sur Vercel) avant d’importer un gros catalogue.");
           inp.value = "";
           return;
         }
         try {
-          await pushRemoteStore(
+          const skipped = rows.length - cleaned.length;
+          await replaceRemoteCatalog(
             {
               products: cleaned,
               users: parsed.users,
@@ -800,8 +815,10 @@ function main() {
             /* catalogue trop lourd pour localStorage : serveur + mémoire suffisent */
           }
           renderTable();
+          const skipNote =
+            skipped > 0 ? ` (${skipped} entrée(s) ignorée(s) — catégorie ou photos invalides)` : "";
           setAdminStatus(
-            `Import terminé : ${cleaned.length} produit(s) publiés sur Vercel (${(file.size / 1024 / 1024).toFixed(1)} Mo).`,
+            `Import terminé : ${cleaned.length} produit(s) sur la base Vercel${skipNote} (${(file.size / 1024 / 1024).toFixed(1)} Mo).`,
           );
           setRemoteBannerStatus("Catalogue en ligne à jour.");
         } catch (err) {
@@ -856,11 +873,11 @@ function main() {
     localStorage.removeItem(STORAGE_CART);
     setProductsMemoryCache(null);
     renderTable();
-    if (!isRemoteMode()) {
-      setAdminStatus("Catalogue effacé.");
+    await ensureAdminRemoteKey();
+    if (!usesRemoteCatalog()) {
+      setAdminStatus("Catalogue effacé localement. Clé admin requise pour vider le serveur.", "error");
       return;
     }
-    await ensureAdminRemoteKey();
     if (!getAdminKey()) {
       setAdminStatus("Catalogue effacé localement. Clé admin requise pour vider le serveur.", "error");
       return;
@@ -947,13 +964,44 @@ function setRemoteBannerStatus(message, isError = false) {
   el.style.color = isError ? "#d8a090" : "var(--shop-muted)";
 }
 
+function initLocalhostDbPanel() {
+  const panel = document.getElementById("admin-localhost-db");
+  if (!panel || isRemoteMode()) return;
+  panel.hidden = false;
+  const urlInp = document.getElementById("admin-remote-url");
+  if (urlInp instanceof HTMLInputElement) {
+    urlInp.value = getRemoteApiBase();
+    urlInp.addEventListener("change", () => setRemoteApiBase(urlInp.value));
+  }
+  document.getElementById("admin-connect-db")?.addEventListener("click", async () => {
+    if (urlInp instanceof HTMLInputElement) setRemoteApiBase(urlInp.value);
+    await ensureAdminRemoteKey();
+    if (!getAdminKey()) {
+      alert("Clé admin (ADMIN_SECRET) requise.");
+      return;
+    }
+    setAdminStatus("Connexion à la base Vercel…");
+    const h = await hydrateAdminFromServer();
+    renderTable();
+    void initRemoteSyncBanner();
+    setAdminStatus(
+      h.ok
+        ? `Connecté — ${h.productCount ?? getProducts().length} produit(s) chargés depuis le serveur.`
+        : "Connexion impossible — vérifiez l’URL et la clé admin.",
+      !h.ok,
+    );
+  });
+}
+
 async function initRemoteSyncBanner() {
   const banner = document.getElementById("admin-remote-banner");
-  if (!banner || !isRemoteMode()) return;
+  if (!banner) return;
+  if (!isRemoteMode() && !usesRemoteCatalog()) return;
   banner.hidden = false;
   const n = getProducts().length;
   try {
-    const healthRes = await fetch("/api/health", { cache: "no-store" });
+    const healthUrl = isRemoteMode() ? "/api/health" : `${getRemoteApiBase()}/api/health`;
+    const healthRes = await fetch(healthUrl, { cache: "no-store" });
     const health = healthRes.ok ? await healthRes.json().catch(() => ({})) : {};
     const meta = await fetchRemoteStoreMeta();
     const serverCount =
@@ -990,7 +1038,6 @@ async function initRemoteSyncBanner() {
 }
 
 async function ensureAdminRemoteKey() {
-  if (!isRemoteMode()) return;
   if (getAdminKey()) return;
   const key = window.prompt(
     "Clé administration (ADMIN_SECRET Vercel) — requise pour enregistrer le catalogue sur le serveur :",
@@ -1000,13 +1047,21 @@ async function ensureAdminRemoteKey() {
 
 async function bootAdmin() {
   await whenStoreReady();
-  await ensureAdminRemoteKey();
+  initLocalhostDbPanel();
   if (isRemoteMode()) {
+    await ensureAdminRemoteKey();
     const hydrated = await hydrateAdminFromServer();
     if (!hydrated.ok) {
       setAdminStatus(
         "Catalogue serveur inaccessible — vérifiez la connexion et /api/health.",
         "error",
+      );
+    }
+  } else if (getAdminKey()) {
+    const hydrated = await hydrateAdminFromServer();
+    if (hydrated.ok) {
+      setAdminStatus(
+        `Catalogue serveur : ${hydrated.productCount ?? getProducts().length} produit(s).`,
       );
     }
   }

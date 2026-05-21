@@ -20,7 +20,44 @@ import {
 } from "./shop-store-idb.js";
 
 const ADMIN_KEY_SESSION = "thebarber_admin_key_v1";
+const REMOTE_API_BASE_SESSION = "thebarber_remote_api_base_v1";
+export const DEFAULT_REMOTE_API_BASE = "https://thebarber-three.vercel.app";
 let hydratePromise = null;
+
+/** @returns {string} */
+export function getRemoteApiBase() {
+  if (typeof window === "undefined") return "";
+  if (isRemoteMode()) return window.location.origin.replace(/\/$/, "");
+  try {
+    const v = sessionStorage.getItem(REMOTE_API_BASE_SESSION);
+    return (v || DEFAULT_REMOTE_API_BASE).replace(/\/$/, "");
+  } catch {
+    return DEFAULT_REMOTE_API_BASE;
+  }
+}
+
+/** @param {string} url */
+export function setRemoteApiBase(url) {
+  const trimmed = String(url || "").trim().replace(/\/$/, "");
+  try {
+    if (trimmed) sessionStorage.setItem(REMOTE_API_BASE_SESSION, trimmed);
+    else sessionStorage.removeItem(REMOTE_API_BASE_SESSION);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Catalogue admin synchronisé avec Vercel Blob (site en ligne ou localhost + clé). */
+export function usesRemoteCatalog() {
+  if (isRemoteMode()) return true;
+  return Boolean(getAdminKey() && getRemoteApiBase());
+}
+
+/** @param {string} [path] */
+function storeApiUrl(path = "/api/store") {
+  if (isRemoteMode()) return path;
+  return `${getRemoteApiBase()}${path}`;
+}
 
 /** @returns {boolean} */
 export function isRemoteMode() {
@@ -152,14 +189,14 @@ export function readLocalStorePayload() {
  *   allowIdbFallback — use IDB only when the network request fails (not when server is empty).
  */
 export async function hydrateRemoteStore(opts = {}) {
-  if (!isRemoteMode()) return { ok: true, source: "local" };
+  if (!isRemoteMode() && !usesRemoteCatalog()) return { ok: true, source: "local" };
   const serverWins = opts.serverWins !== false;
   const allowIdbFallback = opts.allowIdbFallback !== false;
   if (hydratePromise) return hydratePromise;
 
   hydratePromise = (async () => {
     try {
-      const res = await fetch("/api/store", { cache: "no-store" });
+      const res = await fetch(storeApiUrl("/api/store"), { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const meta = data._meta && typeof data._meta === "object" ? data._meta : {};
@@ -255,7 +292,7 @@ async function uploadInlinePhotosInProducts(products, upload, onProgress) {
  * @param {string} body
  */
 async function putStoreBody(key, body) {
-  const res = await fetch("/api/store", {
+  const res = await fetch(storeApiUrl("/api/store"), {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -276,7 +313,9 @@ async function putStoreBody(key, body) {
  * @param {{ onProgress?: (msg: string) => void }} [opts]
  */
 export async function pushRemoteStore(override, opts = {}) {
-  if (!isRemoteMode()) return { ok: true };
+  if (!usesRemoteCatalog()) {
+    return { ok: false, error: "Clé admin requise pour enregistrer sur le serveur Vercel." };
+  }
   const key = getAdminKey();
   if (!key) {
     return { ok: false, error: "Clé admin requise pour enregistrer sur le serveur." };
@@ -333,13 +372,63 @@ export async function pushRemoteStore(override, opts = {}) {
   return { ok: true, productCount: lastCount };
 }
 
+/**
+ * Import catalogue : supprime les produits absents du JSON puis publie les nouveaux.
+ * @param {{ products: unknown[], users?: unknown[], orders?: unknown[] }} payload
+ * @param {{ onProgress?: (msg: string) => void }} [opts]
+ */
+export async function replaceRemoteCatalog(payload, opts = {}) {
+  if (!usesRemoteCatalog()) {
+    throw new Error("Clé admin requise pour importer sur la base Vercel.");
+  }
+  const key = getAdminKey();
+  const products = Array.isArray(payload.products) ? payload.products : [];
+  const newIds = new Set(
+    products
+      .map((p) => (p && typeof p === "object" ? String(/** @type {{ id?: string }} */ (p).id || "") : ""))
+      .filter(Boolean),
+  );
+
+  opts.onProgress?.("Lecture du catalogue serveur…");
+  const res = await fetch(storeApiUrl("/api/store"), { cache: "no-store" });
+  if (!res.ok) throw new Error(`Lecture serveur impossible (${res.status})`);
+  const remote = await res.json();
+  const remoteList = Array.isArray(remote.products) ? remote.products : [];
+  const toDelete = remoteList
+    .map((p) => (p && typeof p === "object" ? String(/** @type {{ id?: string }} */ (p).id || "") : ""))
+    .filter((id) => id && !newIds.has(id));
+
+  const CHUNK = 40;
+  for (let i = 0; i < toDelete.length; i += CHUNK) {
+    const chunk = toDelete.slice(i, i + CHUNK);
+    opts.onProgress?.(`Retrait anciens produits (${i + chunk.length}/${toDelete.length})…`);
+    const body = await encodeStorePutBody({
+      merge: true,
+      deletedProductIds: chunk,
+      products: [],
+      users: [],
+      orders: [],
+    });
+    await putStoreBody(key, body);
+  }
+
+  return pushRemoteStore(
+    {
+      products,
+      users: payload.users || [],
+      orders: payload.orders || [],
+    },
+    opts,
+  );
+}
+
 /** @returns {Promise<{ productCount: number, blobConfigured?: boolean, adminConfigured?: boolean }>} */
 export async function fetchRemoteStoreMeta() {
-  if (!isRemoteMode()) {
+  if (!usesRemoteCatalog()) {
     const local = readLocalStorePayload();
     return { productCount: local.products.length };
   }
-  const res = await fetch("/api/store", { cache: "no-store" });
+  const res = await fetch(storeApiUrl("/api/store"), { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   const meta = data._meta && typeof data._meta === "object" ? data._meta : {};
@@ -370,7 +459,7 @@ async function blobToBase64(blob) {
 export async function uploadMediaBlob(blob, filename = "upload.bin", opts = {}) {
   const baseUrl = (
     opts.baseUrl ||
-    (typeof window !== "undefined" && isRemoteMode() ? window.location.origin : "")
+    (typeof window !== "undefined" && usesRemoteCatalog() ? getRemoteApiBase() : "")
   ).replace(/\/$/, "");
   const key = opts.adminKey || getAdminKey();
   if (!baseUrl) {
@@ -560,7 +649,12 @@ export function scheduleRemoteSync() {
  * @param {{ onProgress?: (msg: string) => void }} [opts]
  */
 export async function pushProductToRemote(product, opts = {}) {
-  if (!isRemoteMode()) return { ok: true };
+  if (!usesRemoteCatalog()) {
+    return {
+      ok: false,
+      error: "Clé admin requise (et URL Vercel sur localhost) pour enregistrer dans la base.",
+    };
+  }
   const key = getAdminKey();
   if (!key) {
     return { ok: false, error: "Clé admin requise." };
@@ -619,7 +713,9 @@ export async function pushProductToRemote(product, opts = {}) {
  * @param {{ onProgress?: (msg: string) => void }} [opts]
  */
 export async function deleteProductFromRemote(id, opts = {}) {
-  if (!isRemoteMode()) return { ok: true };
+  if (!usesRemoteCatalog()) {
+    return { ok: false, error: "Clé admin requise pour supprimer sur le serveur." };
+  }
   const productId = String(id || "").trim();
   if (!productId) return { ok: false, error: "Identifiant produit invalide." };
 

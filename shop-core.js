@@ -196,9 +196,25 @@ export function newProductId() {
  * @param {Omit<Product, "id" | "createdAt"> & { id?: string, createdAt?: string }} partial
  * @returns {{ ok: true, product: Product } | { ok: false, error: string }}
  */
+/** Accepte libellé boutique ou slug exporté (ex. tondeuse → Tondeuse). */
+function normalizeCategoryForImport(category) {
+  const c = String(category || "").trim();
+  if (!c) return "";
+  if (isValidShopCategoryLabel(c)) return c;
+  const fromSlug = labelFromSlug(c);
+  if (fromSlug) return fromSlug;
+  const slug = c
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return labelFromSlug(slug) || c;
+}
+
 export function validateProductInput(partial) {
   const name = String(partial.name || "").trim();
-  const category = String(partial.category || "").trim();
+  const category = normalizeCategoryForImport(partial.category);
   const description = String(partial.description || "").trim();
   const priceTnd = Number(partial.priceTnd);
   const videoUrl = String(partial.videoUrl || "").trim();

@@ -112,6 +112,36 @@
             </div>
 
             <div
+              id="admin-localhost-db"
+              class="admin-card"
+              hidden
+              style="
+                margin-bottom: 1rem;
+                border-color: rgba(100, 160, 220, 0.35);
+                background: rgba(100, 160, 220, 0.06);
+              "
+            >
+              <h2 style="margin-top: 0">Base Vercel (localhost)</h2>
+              <p class="lede" style="margin: 0 0 1rem; max-width: 52rem">
+                Sur <code>localhost</code>, l’admin doit être relié à la base en ligne. Indiquez l’URL du site, la clé
+                admin, puis chargez le catalogue depuis le serveur avant d’ajouter ou supprimer des produits.
+              </p>
+              <label for="admin-remote-url">URL du site Vercel</label>
+              <input
+                class="admin-inp"
+                id="admin-remote-url"
+                type="url"
+                value="https://thebarber-three.vercel.app"
+                style="margin-bottom: 0.75rem"
+              />
+              <div class="admin-row-actions">
+                <button type="button" class="shop-btn-primary" id="admin-connect-db">
+                  Charger depuis la base
+                </button>
+              </div>
+            </div>
+
+            <div
               id="admin-remote-banner"
               class="admin-card"
               hidden
@@ -207,6 +237,6 @@
     </div>
     <script type="module" src="./barber-theme.js"></script>
     <script type="module" src="./shop-bootstrap.js?v=20260521-db"></script>
-    <script type="module" src="./admin.js?v=20260521-db"></script>
+    <script type="module" src="./admin.js?v=20260521-db2"></script>
   </body>
 </html>
