@@ -685,6 +685,55 @@ async function blobToBase64(blob) {
  * @param {string} [filename]
  * @param {{ baseUrl?: string, adminKey?: string, contentType?: string }} [opts]
  */
+const MAX_UPLOAD_BYTES = 3_000_000;
+
+/**
+ * Réduit les JPEG/PNG avant POST /api/upload (limite corps ~4.5 Mo sur Vercel).
+ * @param {Blob} blob
+ */
+async function compressImageBlobForUpload(blob) {
+  const type = String(blob.type || "");
+  if (!type.startsWith("image/") || blob.size <= MAX_UPLOAD_BYTES) return blob;
+  if (typeof createImageBitmap !== "function" || typeof document === "undefined") {
+    return blob;
+  }
+  let bmp;
+  try {
+    bmp = await createImageBitmap(blob, { imageOrientation: "from-image" });
+  } catch {
+    try {
+      bmp = await createImageBitmap(blob);
+    } catch {
+      return blob;
+    }
+  }
+  try {
+    let maxSide = 1400;
+    let quality = 0.78;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return blob;
+    for (let pass = 0; pass < 18; pass++) {
+      const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+      canvas.width = Math.max(1, Math.round(bmp.width * scale));
+      canvas.height = Math.max(1, Math.round(bmp.height * scale));
+      ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      const bytes = (dataUrl.length * 3) / 4;
+      if (bytes <= MAX_UPLOAD_BYTES) {
+        const res = await fetch(dataUrl);
+        return await res.blob();
+      }
+      quality = Math.max(0.35, quality - 0.06);
+      maxSide = Math.max(480, Math.round(maxSide * 0.88));
+    }
+    const res = await fetch(canvas.toDataURL("image/jpeg", 0.4));
+    return await res.blob();
+  } finally {
+    bmp.close?.();
+  }
+}
+
 export async function uploadMediaBlob(blob, filename = "upload.bin", opts = {}) {
   const baseUrl = (
     opts.baseUrl ||
@@ -695,7 +744,16 @@ export async function uploadMediaBlob(blob, filename = "upload.bin", opts = {}) 
     throw new Error("URL du site Vercel requise pour envoyer une vidéo depuis localhost.");
   }
   if (!key) throw new Error("Clé admin requise pour téléverser des médias.");
-  const dataBase64 = await blobToBase64(blob);
+  let payload = blob;
+  if (String(blob.type || "").startsWith("image/")) {
+    payload = await compressImageBlobForUpload(blob);
+  }
+  if (payload.size > MAX_UPLOAD_BYTES && !String(blob.type || "").startsWith("image/")) {
+    throw new Error(
+      `Fichier trop lourd (${Math.round(payload.size / 1e6)} Mo). Maximum ~3 Mo pour l’upload.`,
+    );
+  }
+  const dataBase64 = await blobToBase64(payload);
   const res = await fetch(`${baseUrl}/api/upload`, {
     method: "POST",
     headers: {
@@ -709,7 +767,13 @@ export async function uploadMediaBlob(blob, filename = "upload.bin", opts = {}) 
     }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+  if (!res.ok) {
+    const hint =
+      res.status === 413
+        ? " Image trop lourde : réduisez la taille ou la qualité."
+        : "";
+    throw new Error((data.error || `Upload failed (${res.status})`) + hint);
+  }
   return String(data.url || "");
 }
 

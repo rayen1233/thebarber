@@ -78,6 +78,31 @@ export function resolveShopMediaUrl(raw) {
   const v = String(raw || "").trim();
   if (!v) return "";
   if (v.startsWith("idb://")) return v;
+  if (v.startsWith("/api/media?")) {
+    if (typeof window !== "undefined" && window.location) {
+      try {
+        return new URL(v, window.location.href).href;
+      } catch {
+        return v;
+      }
+    }
+    return v;
+  }
+  if (/\.private\.blob\.vercel-storage\.com/i.test(v)) {
+    try {
+      const u = new URL(v);
+      const pathname = decodeURIComponent(u.pathname.replace(/^\//, ""));
+      if (pathname.startsWith("thebarber/")) {
+        const proxy = `/api/media?pathname=${encodeURIComponent(pathname)}`;
+        if (typeof window !== "undefined" && window.location) {
+          return new URL(proxy, window.location.href).href;
+        }
+        return proxy;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
   if (/^(data:|https?:|blob:)/i.test(v)) return v;
   if (v.startsWith("//")) {
     if (typeof window !== "undefined" && window.location) {
