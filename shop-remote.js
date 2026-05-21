@@ -283,7 +283,7 @@ async function encodeStorePutBody(payload) {
  * @param {(blob: Blob, filename: string) => Promise<string>} upload
  * @param {(msg: string) => void} [onProgress]
  */
-async function uploadInlinePhotosInProducts(products, upload, onProgress) {
+export async function uploadInlinePhotosInProducts(products, upload, onProgress) {
   const out = [];
   for (let i = 0; i < products.length; i++) {
     const p = products[i];

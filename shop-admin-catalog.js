@@ -1,6 +1,5 @@
 /**
- * Admin ↔ base serveur : une seule source de vérité (/api/admin/catalog).
- * Pas de sync localStorage / hydrate parallèle pour le catalogue admin.
+ * Admin ↔ base serveur : une seule source de vérité (/api/admin-catalog).
  */
 import {
   setProductsMemoryCache,
@@ -15,14 +14,16 @@ import {
   setRemoteApiBase,
   DEFAULT_REMOTE_API_BASE,
   uploadMediaBlob,
+  uploadInlinePhotosInProducts,
 } from "./shop-remote.js";
 import { dataUrlToBlob } from "./shop-media-store.js";
-import { uploadInlinePhotosInProducts } from "./lib/catalog-media.mjs";
 
 /** @type {import("./shop-core.js").Product[]} */
 let adminCatalog = [];
 
 const UPDATED_EVENT = "thebarber:admin-catalog-updated";
+
+const API_PATHS = ["/api/admin-catalog", "/api/admin/catalog"];
 
 export function getAdminCatalogProducts() {
   return adminCatalog;
@@ -32,7 +33,7 @@ export function usesAdminDatabase() {
   return isRemoteMode() || Boolean(getAdminKey());
 }
 
-function catalogApiUrl(path = "/api/admin/catalog") {
+function catalogApiUrl(path = "/api/admin-catalog") {
   if (isRemoteMode()) return path;
   return `${getRemoteApiBase()}${path}`;
 }
@@ -42,7 +43,7 @@ function authHeaders() {
   return {
     Authorization: `Bearer ${key}`,
     "X-Admin-Key": key,
-    "Content-Type": "application/json",
+    Accept: "application/json",
   };
 }
 
@@ -60,37 +61,130 @@ function applyCatalogToAdmin(products) {
 
 /**
  * @param {string} url
- * @param {RequestInit} [init]
+ * @param {RequestInit} init
  */
-async function adminCatalogFetch(url, init = {}) {
-  const key = getAdminKey();
-  if (!key) throw new Error("Clé admin requise (ADMIN_SECRET Vercel).");
-  const res = await fetch(url, {
-    ...init,
-    cache: "no-store",
-    headers: { ...authHeaders(), ...(init.headers || {}) },
-  });
-  const data = await res.json().catch(() => ({}));
+async function adminCatalogFetchOne(url, init) {
+  const headers = { ...authHeaders(), ...(init.headers || {}) };
+  if (init.body && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+  const res = await fetch(url, { ...init, cache: "no-store", headers });
+  const text = await res.text();
+  let data = {};
+  if (text.trim()) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      const preview = text.slice(0, 120).replace(/\s+/g, " ");
+      throw new Error(
+        `Réponse non-JSON (${res.status}). ${preview || "Route API absente — redeploy Vercel."}`,
+      );
+    }
+  }
   if (!res.ok) {
     throw new Error(data.error || `Erreur serveur (${res.status})`);
   }
   return data;
 }
 
-/** Charge le catalogue depuis la base (obligatoire au démarrage admin). */
+/**
+ * @param {string} [query] ex. ?id=uuid pour DELETE
+ * @param {RequestInit} [init]
+ */
+async function adminCatalogFetch(query = "", init = {}) {
+  const key = getAdminKey();
+  if (!key) throw new Error("Clé admin requise (ADMIN_SECRET Vercel).");
+
+  const q = query.startsWith("?") ? query : query ? `?${query}` : "";
+  let lastErr = null;
+  for (const apiPath of API_PATHS) {
+    const url = `${catalogApiUrl(apiPath)}${q}`;
+    try {
+      return await adminCatalogFetchOne(url, init);
+    } catch (err) {
+      lastErr = err;
+      if (err instanceof TypeError) {
+        throw new Error(
+          `Connexion impossible (${url}). Vérifiez l’URL Vercel et le redeploy.`,
+        );
+      }
+    }
+  }
+  throw lastErr || new Error("API admin catalogue indisponible.");
+}
+
+/** Lecture catalogue public (GET /api/store, sans clé). */
+async function fetchStorePublic() {
+  const url = isRemoteMode() ? "/api/store" : `${getRemoteApiBase()}/api/store`;
+  const res = await fetch(url, { cache: "no-store" });
+  const text = await res.text();
+  let data = {};
+  if (text.trim()) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Réponse /api/store illisible (non-JSON).");
+    }
+  }
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+/** DELETE via /api/store (secours si /api/admin-catalog absent). */
+async function deleteViaStoreApi(id) {
+  const key = getAdminKey();
+  const url = isRemoteMode()
+    ? `/api/store?id=${encodeURIComponent(id)}`
+    : `${getRemoteApiBase()}/api/store?id=${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "X-Admin-Key": key,
+    },
+  });
+  const text = await res.text();
+  const data = text.trim() ? JSON.parse(text) : {};
+  if (!res.ok) throw new Error(data.error || `Suppression refusée (${res.status})`);
+  applyCatalogToAdmin(Array.isArray(data.products) ? data.products : []);
+  return { productCount: data.productCount ?? adminCatalog.length, deletedId: id };
+}
+
+/** Charge le catalogue depuis la base. */
 export async function refreshAdminCatalog() {
   if (!usesAdminDatabase()) {
     const { getProducts } = await import("./shop-core.js");
     adminCatalog = getProducts();
     return { ok: true, productCount: adminCatalog.length, source: "local" };
   }
-  const data = await adminCatalogFetch(catalogApiUrl());
-  applyCatalogToAdmin(Array.isArray(data.products) ? data.products : []);
-  return {
-    ok: true,
-    productCount: data.productCount ?? adminCatalog.length,
-    source: "database",
-  };
+  if (!getAdminKey()) {
+    const data = await fetchStorePublic();
+    applyCatalogToAdmin(Array.isArray(data.products) ? data.products : []);
+    return {
+      ok: true,
+      productCount: data.productCount ?? adminCatalog.length,
+      source: "store-readonly",
+    };
+  }
+  try {
+    const data = await adminCatalogFetch("", { method: "GET" });
+    applyCatalogToAdmin(Array.isArray(data.products) ? data.products : []);
+    return {
+      ok: true,
+      productCount: data.productCount ?? adminCatalog.length,
+      source: "database",
+    };
+  } catch (err) {
+    const msg = String(err instanceof Error ? err.message : err);
+    if (!/404|non-JSON|indisponible|NOT_FOUND/i.test(msg)) throw err;
+    const data = await fetchStorePublic();
+    applyCatalogToAdmin(Array.isArray(data.products) ? data.products : []);
+    return {
+      ok: true,
+      productCount: data.productCount ?? adminCatalog.length,
+      source: "store-fallback",
+    };
+  }
 }
 
 /** @param {string} productId */
@@ -104,15 +198,22 @@ export async function adminDeleteProduct(productId) {
     window.dispatchEvent(new CustomEvent(UPDATED_EVENT));
     return { productCount: adminCatalog.length };
   }
-  const data = await adminCatalogFetch(
-    `${catalogApiUrl()}?id=${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-  );
-  applyCatalogToAdmin(Array.isArray(data.products) ? data.products : []);
-  if (!data.deleted) {
-    throw new Error("Produit introuvable sur le serveur.");
+  try {
+    const data = await adminCatalogFetch(`id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    applyCatalogToAdmin(Array.isArray(data.products) ? data.products : []);
+    if (!data.deleted) {
+      throw new Error("Produit introuvable sur le serveur.");
+    }
+    return { productCount: data.productCount ?? adminCatalog.length, deletedId: id };
+  } catch (err) {
+    const msg = String(err instanceof Error ? err.message : err);
+    if (/404|non-JSON|indisponible|NOT_FOUND/i.test(msg)) {
+      return deleteViaStoreApi(id);
+    }
+    throw err;
   }
-  return { productCount: data.productCount ?? adminCatalog.length, deletedId: id };
 }
 
 /**
@@ -149,7 +250,7 @@ export async function adminSaveProduct(product, opts = {}) {
     return { productCount: adminCatalog.length };
   }
 
-  const data = await adminCatalogFetch(catalogApiUrl(), {
+  const data = await adminCatalogFetch("", {
     method: "POST",
     body: JSON.stringify({ product: prepared }),
   });
@@ -169,7 +270,7 @@ export async function adminReplaceCatalog(products, extra = {}) {
     window.dispatchEvent(new CustomEvent(UPDATED_EVENT));
     return { productCount: products.length };
   }
-  const data = await adminCatalogFetch(catalogApiUrl(), {
+  const data = await adminCatalogFetch("", {
     method: "PUT",
     body: JSON.stringify({
       products,
