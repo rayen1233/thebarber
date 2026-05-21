@@ -4,6 +4,7 @@ import {
   loadStore,
   saveStore,
   mergeStore,
+  removeProductsById,
   requireAdmin,
   defaultStore,
   storeEnvStatus,
@@ -105,6 +106,36 @@ export default async function handler(req, res) {
     }
   }
 
+  if (req.method === "DELETE") {
+    const gate = requireAdmin(req);
+    if (!gate.ok) {
+      return res.status(gate.status).json({ error: gate.error });
+    }
+    const q = req.query && typeof req.query === "object" ? req.query : {};
+    const id = String(q.id || q.productId || "").trim();
+    if (!id) {
+      return res.status(400).json({ error: "Paramètre id requis (?id=uuid-du-produit)" });
+    }
+    try {
+      const before = await loadStore();
+      const had = before.products.some(
+        (p) => p && typeof p === "object" && String(/** @type {{ id?: string }} */ (p).id) === id,
+      );
+      const saved = await removeProductsById([id]);
+      const verifiedCount = await verifySavedCount(saved.products.length);
+      return res.status(200).json({
+        ok: true,
+        deleted: had,
+        productCount: saved.products.length,
+        verifiedCount,
+      });
+    } catch (err) {
+      console.error("[store] DELETE failed", err);
+      const msg = err instanceof Error ? err.message : "Delete failed";
+      return res.status(500).json({ error: msg });
+    }
+  }
+
   if (req.method === "PUT") {
     const gate = requireAdmin(req);
     if (!gate.ok) {
@@ -154,6 +185,6 @@ export default async function handler(req, res) {
     }
   }
 
-  res.setHeader("Allow", "GET, PUT");
+  res.setHeader("Allow", "GET, PUT, DELETE");
   return res.status(405).json({ error: "Method not allowed" });
 }

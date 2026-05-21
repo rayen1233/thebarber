@@ -484,14 +484,20 @@ function renderTable() {
       }
       setAdminStatus("Suppression sur le serveur…");
       try {
+        const before = getProducts().length;
         const out = await deleteProductFromRemote(id, {
           onProgress: (msg) => setAdminStatus(msg),
         });
         deleteProduct(id);
         renderTable();
-        setAdminStatus(
-          `Produit supprimé (${out.productCount ?? "?"} restant(s) sur le serveur).`,
-        );
+        const after = getProducts().length;
+        if (after >= before) {
+          setAdminStatus("Produit retiré de l’affichage — vérifiez le serveur.", "error");
+        } else {
+          setAdminStatus(
+            `Produit supprimé (${out.productCount ?? "?"} sur le serveur).`,
+          );
+        }
         void initRemoteSyncBanner();
       } catch (err) {
         const msg =

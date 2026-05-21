@@ -274,7 +274,7 @@ async function encodeStorePutBody(payload) {
   let binary = "";
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
   const wrapped = { storeGzipBase64: btoa(binary) };
-  if (payload.merge) wrapped.merge = true;
+  if (payload.merge || payload.deletedProductIds?.length) wrapped.merge = true;
   return JSON.stringify(wrapped);
 }
 
@@ -949,15 +949,22 @@ export async function deleteProductFromRemote(id, opts = {}) {
   }
 
   opts.onProgress?.("Suppression sur le serveur…");
-  const body = await encodeStorePutBody({
-    merge: true,
-    deletedProductIds: [productId],
-    products: [],
-    users: [],
-    orders: [],
+  const url = `${storeApiUrl("/api/store")}?id=${encodeURIComponent(productId)}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "X-Admin-Key": key,
+    },
   });
-  const out = await putStoreBody(key, body);
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(out.error || `Suppression refusée (${res.status})`);
+  }
   const count = out.productCount ?? 0;
+  if (out.deleted === false) {
+    throw new Error("Produit introuvable sur le serveur (id incorrect ou déjà supprimé).");
+  }
 
   const { getProducts, saveProducts } = await import("./shop-core.js");
   const list = getProducts().filter((p) => p.id !== productId);
@@ -968,6 +975,5 @@ export async function deleteProductFromRemote(id, opts = {}) {
     orders: readLocalStorePayload().orders,
   });
 
-  await hydrateAdminFromServer();
   return { ok: true, productCount: count };
 }
