@@ -128,7 +128,7 @@ export function saveProducts(list) {
   try {
     localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(list));
     window.dispatchEvent(new CustomEvent("thebarber:products-updated"));
-    import("./shop-remote.mjs")
+    import("./shop-remote.js")
       .then((m) => m.scheduleRemoteSync?.())
       .catch(() => {});
   } catch (e) {
@@ -206,7 +206,7 @@ export function deleteProduct(id) {
   const list = getProducts().filter((p) => p.id !== id);
   saveProducts(list);
   removeCartLinesForProduct(id);
-  import("./shop-media-store.mjs")
+  import("./shop-media-store.js")
     .then((m) => m.deleteProductVideo(id))
     .catch(() => {});
 }

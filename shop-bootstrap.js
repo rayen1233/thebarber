@@ -5,7 +5,7 @@ import {
   hydrateRemoteStore,
   isRemoteMode,
   maybeMigrateLocalCatalogToServer,
-} from "./shop-remote.mjs";
+} from "./shop-remote.js";
 
 const boot = (async () => {
   if (!isRemoteMode()) return;

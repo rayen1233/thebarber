@@ -8,21 +8,21 @@ import {
   newProductId,
   STORAGE_PRODUCTS,
   STORAGE_CART,
-} from "./shop-core.mjs";
+} from "./shop-core.js";
 import {
   persistProductVideoRef,
   migrateCatalogVideosToIdb,
   productHasVideo,
   isIdbVideoRef,
-} from "./shop-media-store.mjs";
-import { initAdminDashboard } from "./admin-dashboard.mjs";
-import { whenStoreReady } from "./shop-bootstrap.mjs";
+} from "./shop-media-store.js";
+import { initAdminDashboard } from "./admin-dashboard.js";
+import { whenStoreReady } from "./shop-bootstrap.js";
 import {
   isRemoteMode,
   getAdminKey,
   setAdminKey,
   maybeMigrateLocalCatalogToServer,
-} from "./shop-remote.mjs";
+} from "./shop-remote.js";
 
 function escapeHtml(s) {
   return String(s)
@@ -350,7 +350,7 @@ function videoStatusLabel(p) {
 }
 
 /**
- * @param {import("./shop-core.mjs").Product} p
+ * @param {import("./shop-core.js").Product} p
  */
 async function loadProductIntoForm(p) {
   const form = document.getElementById("admin-form");
@@ -520,7 +520,7 @@ function main() {
     setAdminStatus("Lecture de la vidéo…");
     try {
       if (isRemoteMode() && getAdminKey()) {
-        const { uploadMediaFile } = await import("./shop-remote.mjs");
+        const { uploadMediaFile } = await import("./shop-remote.js");
         const url = await uploadMediaFile(f, f.name || "video.mp4");
         urlInp.value = url;
         setAdminStatus("Vidéo hébergée sur Vercel Blob.");

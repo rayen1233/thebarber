@@ -14,8 +14,8 @@ import {
   addToCart,
   getProductById,
   slugFromLabel,
-} from "./shop-core.mjs";
-import { getCurrentUser } from "./shop-account-store.mjs";
+} from "./shop-core.js";
+import { getCurrentUser } from "./shop-account-store.js";
 import {
   syncShopAccountChrome,
   setPostAuthTarget,
@@ -24,22 +24,22 @@ import {
   renderShopCheckout,
   renderShopAccount,
   renderShopOrderDone,
-} from "./shop-auth-checkout.mjs";
+} from "./shop-auth-checkout.js";
 import {
   mountAmbientDust,
   bindCartDrawer,
   bindInternalPageTransitions,
   notifyCartUpdated,
-} from "./shop-ui.mjs";
-import { ensureLuxuryRouteOverlay, navigateLuxury } from "./shop-luxury-nav.mjs";
-import { whenStoreReady } from "./shop-bootstrap.mjs";
-import { initTheme, mountThemeDevToggle } from "./barber-theme.mjs";
+} from "./shop-ui.js";
+import { ensureLuxuryRouteOverlay, navigateLuxury } from "./shop-luxury-nav.js";
+import { whenStoreReady } from "./shop-bootstrap.js";
+import { initTheme, mountThemeDevToggle } from "./barber-theme.js";
 import {
   productHasVideo,
   resolveProductVideoUrl,
   migrateCatalogVideosToIdb,
   revokeAllProductVideoObjectUrls,
-} from "./shop-media-store.mjs";
+} from "./shop-media-store.js";
 
 const SHELL_ID = "shop-atelier";
 
@@ -328,7 +328,7 @@ function mediaPreview(product) {
 }
 
 /**
- * @param {import("./shop-core.mjs").Product[]} products
+ * @param {import("./shop-core.js").Product[]} products
  */
 async function hydrateListCardMedia(products) {
   revokeAllProductVideoObjectUrls();

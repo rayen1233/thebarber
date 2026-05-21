@@ -1,4 +1,4 @@
-import { loadStore, saveStore, requireAdmin, defaultStore } from "../lib/store-server.mjs";
+import { loadStore, saveStore, requireAdmin, defaultStore } from "../lib/store-server.js";
 
 export const config = {
   api: {

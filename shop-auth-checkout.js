@@ -8,8 +8,8 @@ import {
   cartLinesWithProducts,
   getProductById,
   setCartLineQty,
-} from "./shop-core.mjs";
-import { navigateLuxury } from "./shop-luxury-nav.mjs";
+} from "./shop-core.js";
+import { navigateLuxury } from "./shop-luxury-nav.js";
 import {
   getCurrentUser,
   logoutUser,
@@ -21,7 +21,7 @@ import {
   createOrder,
   getOrders,
   userOrderStats,
-} from "./shop-account-store.mjs";
+} from "./shop-account-store.js";
 
 const POST_AUTH_KEY = "thebarber_post_auth_target";
 

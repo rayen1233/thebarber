@@ -87,7 +87,7 @@ export function getUsers() {
 /** @param {UserRecord[]} list */
 export function saveUsers(list) {
   localStorage.setItem(STORAGE_USERS, JSON.stringify(list));
-  import("./shop-remote.mjs")
+  import("./shop-remote.js")
     .then((m) => m.scheduleRemoteSync?.())
     .catch(() => {});
 }
@@ -206,7 +206,7 @@ export function getOrders() {
 /** @param {OrderRecord[]} list */
 export function saveOrders(list) {
   localStorage.setItem(STORAGE_ORDERS, JSON.stringify(list));
-  import("./shop-remote.mjs")
+  import("./shop-remote.js")
     .then((m) => m.scheduleRemoteSync?.())
     .catch(() => {});
 }

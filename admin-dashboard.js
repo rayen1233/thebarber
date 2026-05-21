@@ -12,7 +12,7 @@ import {
   deleteUser,
   userOrderStats,
   getOrdersForUser,
-} from "./shop-account-store.mjs";
+} from "./shop-account-store.js";
 
 function escapeHtml(s) {
   return String(s)

@@ -2,7 +2,7 @@
  * Product videos in IndexedDB (localStorage quota is too small for multiple data: URLs).
  */
 
-import { getProducts, saveProducts, resolveShopMediaUrl } from "./shop-core.mjs";
+import { getProducts, saveProducts, resolveShopMediaUrl } from "./shop-core.js";
 
 const DB_NAME = "thebarber_media_v1";
 const DB_VERSION = 1;
@@ -152,7 +152,7 @@ export async function persistProductVideoRef(productId, videoUrl) {
   if (trimmed.startsWith("data:") && /video|octet-stream/i.test(trimmed.slice(0, 40))) {
     try {
       const { isRemoteMode, uploadMediaFile, getAdminKey } = await import(
-        "./shop-remote.mjs"
+        "./shop-remote.js"
       );
       if (isRemoteMode() && getAdminKey()) {
         const url = await uploadMediaFile(dataUrlToBlob(trimmed), `${productId}.mp4`);

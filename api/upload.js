@@ -1,5 +1,5 @@
 import { put } from "@vercel/blob";
-import { requireAdmin } from "../lib/store-server.mjs";
+import { requireAdmin } from "../lib/store-server.js";
 
 export const config = {
   api: {

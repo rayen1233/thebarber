@@ -1,8 +1,8 @@
 /**
  * Hero right rail — portrait drops, manifeste, Instagram.
  */
-import { whenStoreReady } from "./shop-bootstrap.mjs";
-import { getProducts, slugFromLabel } from "./shop-core.mjs";
+import { whenStoreReady } from "./shop-bootstrap.js";
+import { getProducts, slugFromLabel } from "./shop-core.js";
 
 function escapeHtml(s) {
   return String(s)
@@ -19,7 +19,7 @@ function formatPrice(n) {
   });
 }
 
-/** @returns {import("./shop-core.mjs").Product[]} */
+/** @returns {import("./shop-core.js").Product[]} */
 function latestProducts(limit = 3) {
   return getProducts()
     .slice()

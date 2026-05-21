@@ -1,12 +1,12 @@
 /**
  * Sync catalogue / comptes / commandes with Vercel API (Blob-backed store).
  */
-import { STORAGE_PRODUCTS } from "./shop-core.mjs";
+import { STORAGE_PRODUCTS } from "./shop-core.js";
 import {
   STORAGE_USERS,
   STORAGE_ORDERS,
   STORAGE_CURRENT_USER,
-} from "./shop-account-store.mjs";
+} from "./shop-account-store.js";
 
 const ADMIN_KEY_SESSION = "thebarber_admin_key_v1";
 let hydratePromise = null;
