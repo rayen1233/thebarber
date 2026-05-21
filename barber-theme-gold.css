@@ -390,41 +390,27 @@ html.theme-gold .showroom-close:hover {
   padding: 0.25rem clamp(1rem, 3vw, 2rem) 1.5rem !important;
 }
 
-@media (min-width: 768px) {
+/* Desktop — exactly 4 products per row, then wrap */
+@media (min-width: 992px) {
   #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
   #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
   #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
     display: grid !important;
-    grid-template-columns: repeat(4, minmax(200px, 270px)) !important;
-    justify-content: center !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    justify-content: stretch !important;
+    justify-items: stretch !important;
     align-items: stretch !important;
     gap: clamp(16px, 1.8vw, 22px) !important;
     width: 100% !important;
-    max-width: 100% !important;
+    max-width: min(1320px, 100%) !important;
     margin: 0.15rem auto 0 !important;
     min-height: 0 !important;
     padding: 0 0 0.5rem !important;
   }
 }
 
-@media (min-width: 768px) and (max-width: 1280px) {
-  #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
-  #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
-  #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
-    grid-template-columns: repeat(3, minmax(200px, 270px)) !important;
-  }
-}
-
-@media (min-width: 768px) and (max-width: 960px) {
-  #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
-  #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
-  #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
-    grid-template-columns: repeat(2, minmax(180px, 270px)) !important;
-  }
-}
-
-/* Mobile shop — leave shop-theme.css grid/cards (no squeezed 4-column override) */
-@media (max-width: 767px) {
+/* Mobile / tablet — 1 product per row */
+@media (max-width: 991px) {
   #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
   #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
   #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
@@ -434,7 +420,7 @@ html.theme-gold .showroom-close:hover {
     justify-items: stretch !important;
     gap: clamp(1rem, 3vw, 1.35rem) !important;
     width: 100% !important;
-    max-width: min(340px, 100%) !important;
+    max-width: min(360px, 100%) !important;
     margin: 0 auto !important;
     padding: 0 0 0.75rem !important;
   }
@@ -469,7 +455,7 @@ html.theme-gold .showroom-close:hover {
   width: 100% !important;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 992px) {
   #shop-atelier.is-open .shop-bc-card,
   #shop-atelier.is-open .product-card,
   #shop-atelier.is-open #shop-view-list:not([hidden]) .shop-bc-card,
@@ -679,16 +665,6 @@ html.theme-gold .shop-ambient-particle {
   box-shadow: 0 0 8px rgba(201, 162, 39, 0.28) !important;
 }
 
-@media (max-width: 900px) {
-  #shop-atelier.is-open #shop-view-list:not([hidden]) .shop-bc-card,
-  #shop-atelier.is-open #shop-view-list:not([hidden]) a.shop-bc-card {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    height: clamp(400px, 52vh, 500px) !important;
-    max-height: 520px !important;
-  }
-}
 
 /* —— Intro hero + showroom — mobile (≤767px) —— */
 @media (max-width: 767px) {

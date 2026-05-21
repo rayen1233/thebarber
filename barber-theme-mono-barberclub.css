@@ -403,15 +403,27 @@ body.theme-mono #shop-atelier .shop-cat__scroller {
 
 body.theme-mono #shop-atelier .shop-cat__grid {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
-  justify-content: start !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  justify-content: stretch !important;
+  justify-items: stretch !important;
   align-items: stretch !important;
   gap: clamp(1.25rem, 2.5vw, 2rem) !important;
   width: 100% !important;
-  max-width: 1180px !important;
+  max-width: min(1320px, 100%) !important;
   margin: 0 auto !important;
   min-height: 0 !important;
   padding: clamp(0.75rem, 2vw, 1.5rem) 0 !important;
+}
+
+@media (max-width: 991px) {
+  body.theme-mono #shop-atelier .shop-cat__grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    max-width: min(360px, 100%) !important;
+  }
+
+  body.theme-mono #shop-atelier .shop-bc-card {
+    max-width: 100% !important;
+  }
 }
 
 body.theme-mono #shop-atelier .shop-bc-card {

@@ -663,7 +663,7 @@ body.theme-mono .showroom-close:hover {
   margin: 0 auto !important;
 }
 
-#shop-atelier.is-open .shop-cat__scroller {
+body.theme-mono #shop-atelier.is-open .shop-cat__scroller {
   display: flex !important;
   justify-content: center !important;
   overflow-x: auto !important;
@@ -672,19 +672,35 @@ body.theme-mono .showroom-close:hover {
   padding: 0.25rem 0 !important;
 }
 
-#shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
-#shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
-#shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
-  display: flex !important;
-  flex-wrap: nowrap !important;
-  justify-content: center !important;
-  align-items: stretch !important;
-  gap: clamp(18px, 2vw, 24px) !important;
-  width: max-content !important;
-  max-width: 100% !important;
-  margin: 0.15rem auto 0 !important;
-  min-height: 0 !important;
-  padding: 0 clamp(1rem, 3vw, 2rem) 0.1rem !important;
+@media (min-width: 992px) {
+  body.theme-mono #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
+  body.theme-mono #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
+  body.theme-mono #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    flex-wrap: unset !important;
+    justify-content: stretch !important;
+    justify-items: stretch !important;
+    width: 100% !important;
+    max-width: min(1320px, 100%) !important;
+    gap: clamp(18px, 2vw, 24px) !important;
+    margin: 0.15rem auto 0 !important;
+    padding: 0 clamp(1rem, 3vw, 2rem) 0.1rem !important;
+  }
+}
+
+@media (max-width: 991px) {
+  body.theme-mono #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
+  body.theme-mono #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
+  body.theme-mono #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: min(360px, 100%) !important;
+    margin: 0 auto !important;
+    gap: clamp(1rem, 3vw, 1.35rem) !important;
+    padding: 0 clamp(1rem, 3vw, 2rem) 0.75rem !important;
+  }
 }
 
 #shop-atelier.is-open .shop-cat__grid--empty,
@@ -706,14 +722,14 @@ body.theme-mono #shop-atelier .shop-cat__grid.shop-cat__grid--empty {
   width: 100% !important;
 }
 
-/* BarberClub portrait cards — centered row */
-#shop-atelier.is-open .shop-bc-card,
-#shop-atelier.is-open .product-card {
+/* BarberClub portrait cards — mono theme only */
+body.theme-mono #shop-atelier.is-open .shop-bc-card,
+body.theme-mono #shop-atelier.is-open .product-card {
   position: relative !important;
   display: block !important;
-  flex: 0 0 clamp(260px, 18vw, 310px) !important;
-  width: clamp(260px, 18vw, 310px) !important;
-  max-width: clamp(260px, 18vw, 310px) !important;
+  flex: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
   height: clamp(560px, 64vh, 660px) !important;
   min-height: 560px !important;
   max-height: 660px !important;

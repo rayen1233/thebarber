@@ -2153,33 +2153,24 @@ body.shop-body.is-page-exiting .shop-page-transition {
 
 #shop-atelier .shop-cat__grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(200px, 270px));
-  justify-content: center;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  justify-content: stretch;
   align-items: stretch;
   gap: clamp(16px, 1.8vw, 22px);
   width: 100%;
-  max-width: 100%;
+  max-width: min(1320px, 100%);
   margin: 0 auto;
   min-height: 0;
   padding: 0 0 0.5rem;
 }
 
-@media (max-width: 1280px) {
+/* Mobile / tablet portrait — 1 product per row */
+@media (max-width: 991px) {
   #shop-atelier .shop-cat__grid {
-    grid-template-columns: repeat(3, minmax(200px, 270px));
-  }
-}
-
-@media (max-width: 960px) {
-  #shop-atelier .shop-cat__grid {
-    grid-template-columns: repeat(2, minmax(180px, 270px));
-  }
-}
-
-@media (max-width: 560px) {
-  #shop-atelier .shop-cat__grid {
-    grid-template-columns: minmax(0, min(100%, 300px));
-    justify-content: center;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+    justify-items: stretch;
+    max-width: min(360px, 100%);
   }
 }
 
