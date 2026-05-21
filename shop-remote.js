@@ -233,6 +233,28 @@ export async function hydrateAdminFromServer() {
 }
 
 const MAX_PUT_BYTES = 3_200_000;
+const PLACEHOLDER_PHOTO = "public/vite.svg";
+
+/**
+ * Retire data: / idb: trop lourds pour PUT Vercel — garde http(s) et chemins public/.
+ * @param {unknown[]} products
+ */
+export function leanProductsForRemotePush(products) {
+  return products.map((p, i) => {
+    if (!p || typeof p !== "object") return p;
+    const row = { .../** @type {Record<string, unknown>} */ (p) };
+    let photos = (Array.isArray(row.photos) ? row.photos : [])
+      .map((u) => String(u || "").trim())
+      .filter((u) => u && !u.startsWith("data:") && !u.startsWith("idb://"));
+    if (!photos.length) photos = [PLACEHOLDER_PHOTO];
+    while (photos.length < 3) photos.push(photos[0]);
+    row.photos = photos.slice(0, 6);
+    const vid = String(row.videoUrl || "").trim();
+    if (vid.startsWith("data:") || vid.startsWith("idb://")) row.videoUrl = "";
+    if (!row.id) row.id = `p-import-${i}-${Date.now()}`;
+    return row;
+  });
+}
 
 /**
  * @param {Record<string, unknown>} payload
@@ -274,8 +296,9 @@ async function uploadInlinePhotosInProducts(products, upload, onProgress) {
         try {
           const url = await upload(dataUrlToBlob(raw), `p-${row.id || i}-${j}.jpg`);
           nextPhotos.push(url);
-        } catch {
-          nextPhotos.push(raw);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (/unauthorized|401/i.test(msg)) throw err;
         }
       } else {
         nextPhotos.push(raw);
@@ -297,6 +320,7 @@ async function putStoreBody(key, body) {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${key}`,
+      "X-Admin-Key": key,
     },
     body,
   });
@@ -330,17 +354,45 @@ export async function pushRemoteStore(override, opts = {}) {
 
   if (hasInline) {
     opts.onProgress?.("Envoi des images vers Vercel Blob…");
-    const uploaded = await uploadInlinePhotosInProducts(
-      products,
-      (blob, name) => uploadMediaBlob(blob, name),
-      opts.onProgress,
-    );
-    payload = { ...payload, products: uploaded };
-    saveProducts(/** @type {import("./shop-core.js").Product[]} */ (uploaded));
+    try {
+      const uploaded = await uploadInlinePhotosInProducts(
+        products,
+        (blob, name) => uploadMediaBlob(blob, name),
+        opts.onProgress,
+      );
+      payload = { ...payload, products: uploaded };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/unauthorized|401/i.test(msg)) throw err;
+      console.warn("[thebarber] upload photos partiel, envoi allégé", err);
+      opts.onProgress?.("Photos non envoyées — catalogue allégé pour le serveur…");
+    }
   }
+
+  payload = {
+    ...payload,
+    products: leanProductsForRemotePush(
+      Array.isArray(payload.products) ? payload.products : [],
+    ),
+  };
+  saveProducts(/** @type {import("./shop-core.js").Product[]} */ (payload.products));
 
   let lastCount = 0;
   const list = Array.isArray(payload.products) ? payload.products : [];
+
+  const fullReplaceBody = await encodeStorePutBody({
+    merge: false,
+    products: list,
+    users: payload.users || [],
+    orders: payload.orders || [],
+  });
+  if (list.length && fullReplaceBody.length <= MAX_PUT_BYTES) {
+    opts.onProgress?.("Publication du catalogue complet sur le serveur…");
+    const out = await putStoreBody(key, fullReplaceBody);
+    lastCount = out.productCount ?? list.length;
+    await saveStoreSnapshotIdb(payload);
+    return { ok: true, productCount: lastCount };
+  }
 
   for (let i = 0; i < list.length; i++) {
     opts.onProgress?.(`Catalogue ${i + 1}/${list.length}…`);
@@ -412,14 +464,26 @@ export async function replaceRemoteCatalog(payload, opts = {}) {
     await putStoreBody(key, body);
   }
 
-  return pushRemoteStore(
+  const lean = leanProductsForRemotePush(products);
+  const result = await pushRemoteStore(
     {
-      products,
+      products: lean,
       users: payload.users || [],
       orders: payload.orders || [],
     },
     opts,
   );
+
+  const healthRes = await fetch(storeApiUrl("/api/health"), { cache: "no-store" });
+  const health = healthRes.ok ? await healthRes.json().catch(() => ({})) : {};
+  const serverCount =
+    typeof health.productCount === "number" ? health.productCount : result.productCount;
+  if (!serverCount) {
+    throw new Error(
+      "Import refusé par le serveur (0 produit en base). Vérifiez la clé ADMIN_SECRET, réessayez avec des photos URL (pas seulement data:), ou utilisez scripts/push-catalog.mjs --skip-images.",
+    );
+  }
+  return { ...result, productCount: serverCount };
 }
 
 /** @returns {Promise<{ productCount: number, blobConfigured?: boolean, adminConfigured?: boolean }>} */

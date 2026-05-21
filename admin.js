@@ -738,7 +738,14 @@ function main() {
     setAdminStatus("Export catalogue téléchargé (produits, comptes, commandes).");
   });
 
-  document.getElementById("admin-import")?.addEventListener("click", () => {
+  document.getElementById("admin-import")?.addEventListener("click", async () => {
+    await ensureAdminRemoteKey();
+    if (!usesRemoteCatalog()) {
+      const go = confirm(
+        "Sans clé admin, l’import reste uniquement dans ce navigateur (pas sur Vercel).\n\nContinuer en local uniquement ?",
+      );
+      if (!go) return;
+    }
     document.getElementById("admin-import-file")?.click();
   });
 
