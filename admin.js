@@ -232,8 +232,6 @@ async function loadFileIntoRow(row, file) {
 
   try {
     const dataUrl = await compressImageToJpegDataUrl(file);
-    const rowId = row.dataset.photoRowId || `ph-${++photoRowSeq}`;
-    row.dataset.photoRowId = rowId;
     photoRowDataCache.set(rowId, dataUrl);
     if (urlInp) urlInp.value = "";
     if (preview) {
