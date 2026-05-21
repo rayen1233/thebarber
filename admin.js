@@ -798,10 +798,14 @@ function main() {
         try {
           const skipped = rows.length - cleaned.length;
           setAdminStatus("Import vers la base…");
-          const out = await adminReplaceCatalog(cleaned, {
-            users: parsed.users,
-            orders: parsed.orders,
-          });
+          const out = await adminReplaceCatalog(
+            cleaned,
+            {
+              users: parsed.users,
+              orders: parsed.orders,
+            },
+            { onProgress: (msg) => setAdminStatus(msg) },
+          );
           if (parsed.users.length) saveUsers(parsed.users);
           if (parsed.orders.length) saveOrders(parsed.orders);
           renderTable();
