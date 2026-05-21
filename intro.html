@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- the-barber intro: showroom (photo backplates, no 3D) -->
-<html lang="en" data-intro-build="20260521-mobile-fix">
+<html lang="en" data-intro-build="20260522-hero-vid-shop">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="./logo.png" />
@@ -4086,8 +4086,17 @@
         }
 
         .order-hero__inner {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
           min-height: 100dvh;
           min-height: 100svh;
+          padding:
+            calc(env(safe-area-inset-top, 0px) + 0.5rem)
+            0
+            calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+          box-sizing: border-box;
         }
 
         body.intro-reveal .order-hero__inner {
@@ -4139,18 +4148,20 @@
         }
 
         .order-hero__editorial {
-          left: 0;
-          right: 0;
+          position: relative;
+          left: auto;
+          right: auto;
           top: auto;
           width: 100%;
-          max-width: none;
-          padding:
-            calc(env(safe-area-inset-top, 0px) + clamp(1.15rem, 4.5vh, 2rem))
-            clamp(1.15rem, 5vw, 1.65rem)
-            clamp(1.5rem, 7vh, 2.75rem);
+          max-width: min(20rem, 92vw);
+          margin: 0 auto;
+          padding: 0 clamp(1.15rem, 5vw, 1.65rem);
           transform: none;
           align-items: center;
+          justify-content: center;
           text-align: center;
+          flex: 0 0 auto;
+          pointer-events: auto;
         }
 
         .order-hero__editorial::before {
@@ -4226,7 +4237,7 @@
 
         .order-hero__logo-glow {
           left: 50%;
-          top: clamp(7.5rem, 22vh, 10rem);
+          top: 50%;
           width: min(300px, 88vw);
           transform: translate(-50%, -50%);
         }
@@ -4293,6 +4304,9 @@
         }
 
         #order-showroom .showroom-split {
+          overflow-x: hidden;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
           padding:
             calc(env(safe-area-inset-top, 0px) + 3.35rem)
             clamp(0.45rem, 2vw, 0.65rem)
@@ -4310,7 +4324,8 @@
 
         .showroom-split__panels {
           grid-template-columns: 1fr !important;
-          grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+          grid-template-rows: repeat(4, minmax(22vh, 28vh)) !important;
+          min-height: min(112vh, 920px);
           gap: clamp(0.3rem, 1.2vw, 0.45rem);
           --split-vx: 50% !important;
           --split-hy: 50% !important;
@@ -4429,6 +4444,23 @@
           .showroom-panel__title {
           opacity: 1 !important;
           transform: none !important;
+        }
+      }
+
+      @media (max-width: 991px) and (hover: none) {
+        .showroom-split__panels:has(> .showroom-panel:hover)
+          > .showroom-panel:not(:hover)
+          .showroom-panel__img,
+        .showroom-split__panels:has(> .showroom-panel:hover)
+          > .showroom-panel:not(:hover)
+          .showroom-panel__video {
+          opacity: 1 !important;
+          filter: brightness(0.58) contrast(1.08) saturate(0.96) !important;
+        }
+
+        .showroom-panel:hover .showroom-panel__img,
+        .showroom-panel:hover .showroom-panel__video {
+          filter: brightness(0.58) contrast(1.08) saturate(0.96) !important;
         }
       }
 
@@ -5578,8 +5610,8 @@
     </style>
     <!-- Typography + gold luxury layer (after shop + inline) -->
     <link rel="stylesheet" href="./barber-typography.css?v=20260515-73" />
-    <link rel="stylesheet" href="./barber-theme-gold.css?v=20260521-mobile2" />
-    <link rel="stylesheet" href="./barber-theme-mono-override.css?v=20260521-mobile2" />
+    <link rel="stylesheet" href="./barber-theme-gold.css?v=20260522-shop-hero" />
+    <link rel="stylesheet" href="./barber-theme-mono-override.css?v=20260522-shop-hero" />
   </head>
   <body>
     <div id="page-scroll-root" class="page-scroll-root">
@@ -6522,7 +6554,7 @@
     </div>
 
     <script type="module" src="./shop-bootstrap.js?v=20260521-db"></script>
-    <script type="module" src="./intro-showroom.js?v=20260522-js"></script>
+    <script type="module" src="./intro-showroom.js?v=20260522-vid"></script>
     <script type="module" src="./intro-hero-ambient.js?v=20260522-js"></script>
     <script type="module" src="./intro-shop.js?v=20260522-js"></script>
     <script>

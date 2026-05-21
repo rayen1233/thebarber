@@ -109,10 +109,11 @@ function videoCandidatesForIndex(i) {
 /**
  * @param {HTMLVideoElement} v
  */
-function configureShowroomVideo(v) {
+function configureShowroomVideo(v, opts = {}) {
+  const preload = opts.preload === "auto" ? "auto" : "metadata";
   v.muted = true;
   v.loop = true;
-  v.autoplay = true;
+  v.autoplay = false;
   v.playsInline = true;
   v.setAttribute("playsinline", "");
   v.controls = false;
@@ -123,7 +124,62 @@ function configureShowroomVideo(v) {
   } catch {
     /* ignore */
   }
-  v.setAttribute("preload", "auto");
+  v.setAttribute("preload", preload);
+}
+
+function isShowroomOpen() {
+  const el = document.getElementById("order-showroom");
+  return Boolean(el?.classList.contains("is-open") && !el.classList.contains("is-closing"));
+}
+
+/** @type {IntersectionObserver | null} */
+let showroomVideoObserver = null;
+
+function observeShowroomPanelVideo(video) {
+  if (!(video instanceof HTMLVideoElement)) return;
+  if (!showroomVideoObserver) bindShowroomVideoVisibility();
+  showroomVideoObserver?.observe(video);
+}
+
+function bindShowroomVideoVisibility() {
+  if (showroomVideoObserver) return;
+  const root = document.getElementById("order-showroom");
+  showroomVideoObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const video = entry.target;
+        if (!(video instanceof HTMLVideoElement) || !video.classList.contains("is-loaded")) continue;
+        if (!isShowroomOpen()) {
+          video.pause();
+          continue;
+        }
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.42) {
+          video.setAttribute("preload", "auto");
+          const p = video.play();
+          if (p && typeof p.catch === "function") p.catch(() => {});
+        } else {
+          video.pause();
+        }
+      }
+    },
+    {
+      root: root instanceof Element ? root : null,
+      threshold: [0, 0.25, 0.42, 0.6],
+      rootMargin: "0px",
+    },
+  );
+}
+
+function syncShowroomVideoPlayback() {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!isShowroomOpen() || reduce) {
+    pauseShowroomPanelVideos();
+    return;
+  }
+  document.querySelectorAll(".showroom-panel__video.is-loaded").forEach((el) => {
+    if (!(el instanceof HTMLVideoElement)) return;
+    observeShowroomPanelVideo(el);
+  });
 }
 
 async function resolveFirstAssetUrl(urls) {
@@ -166,8 +222,8 @@ function loadShowroomPanelVideo(video, url) {
     }
     if (video.dataset.showroomSrc === url && video.classList.contains("is-loaded")) {
       configureShowroomVideo(video);
-      const p = video.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
+      observeShowroomPanelVideo(video);
+      syncShowroomVideoPlayback();
       resolve(true);
       return;
     }
@@ -179,8 +235,8 @@ function loadShowroomPanelVideo(video, url) {
       video.dataset.showroomSrc = url;
       video.removeAttribute("hidden");
       video.classList.add("is-loaded");
-      const p = video.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
+      observeShowroomPanelVideo(video);
+      syncShowroomVideoPlayback();
       resolve(true);
     };
     const onErr = () => {
@@ -289,13 +345,7 @@ function pauseShowroomPanelVideos() {
 }
 
 function resumeShowroomPanelVideos() {
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce) return;
-  document.querySelectorAll(".showroom-panel__video.is-loaded").forEach((el) => {
-    if (!(el instanceof HTMLVideoElement)) return;
-    const p = el.play();
-    if (p && typeof p.catch === "function") p.catch(() => {});
-  });
+  syncShowroomVideoPlayback();
 }
 
 function isShowroomStackLayout() {
@@ -784,6 +834,12 @@ bindSplitLineHover();
 bindShowroomParallax();
 bindMerchTeaser();
 bindMerchTeaserParallax();
+bindShowroomVideoVisibility();
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") pauseShowroomPanelVideos();
+  else if (isShowroomOpen()) syncShowroomVideoPlayback();
+});
 
 syncShowroomLayoutClass();
 window.addEventListener("resize", syncShowroomLayoutClass);

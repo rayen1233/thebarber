@@ -2652,6 +2652,29 @@ body.theme-mono .cine-logo-lit {
 
 /* —— Intro hero + showroom — mobile (≤767px) —— */
 @media (max-width: 767px) {
+  body.theme-mono .order-hero__inner {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  body.theme-mono .order-hero__editorial {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    margin: 0 auto !important;
+    justify-content: center !important;
+  }
+
+  body.theme-mono .order-hero__logo-glow {
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
   body.theme-mono .order-hero__stage,
   body.theme-mono .order-hero__imgbox {
     overflow: hidden !important;

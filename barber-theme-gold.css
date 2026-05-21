@@ -390,22 +390,24 @@ html.theme-gold .showroom-close:hover {
   padding: 0.25rem clamp(1rem, 3vw, 2rem) 1.5rem !important;
 }
 
-#shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
-#shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
-#shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
-  display: grid !important;
-  grid-template-columns: repeat(4, minmax(200px, 270px)) !important;
-  justify-content: center !important;
-  align-items: stretch !important;
-  gap: clamp(16px, 1.8vw, 22px) !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0.15rem auto 0 !important;
-  min-height: 0 !important;
-  padding: 0 0 0.5rem !important;
+@media (min-width: 768px) {
+  #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
+  #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
+  #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(200px, 270px)) !important;
+    justify-content: center !important;
+    align-items: stretch !important;
+    gap: clamp(16px, 1.8vw, 22px) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0.15rem auto 0 !important;
+    min-height: 0 !important;
+    padding: 0 0 0.5rem !important;
+  }
 }
 
-@media (max-width: 1280px) {
+@media (min-width: 768px) and (max-width: 1280px) {
   #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
   #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
   #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
@@ -413,7 +415,7 @@ html.theme-gold .showroom-close:hover {
   }
 }
 
-@media (max-width: 960px) {
+@media (min-width: 768px) and (max-width: 960px) {
   #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
   #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
   #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
@@ -421,12 +423,32 @@ html.theme-gold .showroom-close:hover {
   }
 }
 
-@media (max-width: 560px) {
+/* Mobile shop — leave shop-theme.css grid/cards (no squeezed 4-column override) */
+@media (max-width: 767px) {
   #shop-atelier.is-open .shop-cat__grid:not(.shop-cat__grid--empty),
   #shop-atelier.is-open .shop-products-grid:not(.shop-cat__grid--empty),
   #shop-atelier.is-open .product-grid:not(.shop-cat__grid--empty) {
-    grid-template-columns: minmax(0, min(100%, 300px)) !important;
-    justify-content: center !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-content: stretch !important;
+    justify-items: stretch !important;
+    gap: clamp(1rem, 3vw, 1.35rem) !important;
+    width: 100% !important;
+    max-width: min(340px, 100%) !important;
+    margin: 0 auto !important;
+    padding: 0 0 0.75rem !important;
+  }
+
+  #shop-atelier.is-open .shop-bc-card,
+  #shop-atelier.is-open .product-card,
+  #shop-atelier.is-open #shop-view-list:not([hidden]) .shop-bc-card,
+  #shop-atelier.is-open #shop-view-list:not([hidden]) a.shop-bc-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: clamp(380px, 62vh, 480px) !important;
+    max-height: none !important;
+    border-radius: var(--lux-r-card, 20px) !important;
+    animation: shopBcCardIn 0.95s var(--shop-ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both !important;
   }
 }
 
@@ -447,36 +469,38 @@ html.theme-gold .showroom-close:hover {
   width: 100% !important;
 }
 
-#shop-atelier.is-open .shop-bc-card,
-#shop-atelier.is-open .product-card,
-#shop-atelier.is-open #shop-view-list:not([hidden]) .shop-bc-card,
-#shop-atelier.is-open #shop-view-list:not([hidden]) a.shop-bc-card {
-  position: relative !important;
-  display: block !important;
-  flex: none !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  height: clamp(440px, 48vh, 540px) !important;
-  min-height: 0 !important;
-  max-height: 560px !important;
-  aspect-ratio: auto !important;
-  margin-top: 0 !important;
-  border-radius: 20px !important;
-  border: 1px solid var(--gold-border) !important;
-  transform: none !important;
-  filter: none !important;
-  animation: shopBcCardIn 0.95s var(--shop-ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both !important;
-  opacity: 1 !important;
-  box-shadow:
-    0 16px 40px rgba(0, 0, 0, 0.52),
-    0 0 18px rgba(201, 162, 39, 0.06) !important;
-  overflow: hidden !important;
-  background: #050403 !important;
-  transition:
-    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.55s ease,
-    border-color 0.55s ease !important;
+@media (min-width: 768px) {
+  #shop-atelier.is-open .shop-bc-card,
+  #shop-atelier.is-open .product-card,
+  #shop-atelier.is-open #shop-view-list:not([hidden]) .shop-bc-card,
+  #shop-atelier.is-open #shop-view-list:not([hidden]) a.shop-bc-card {
+    position: relative !important;
+    display: block !important;
+    flex: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: clamp(440px, 48vh, 540px) !important;
+    min-height: 0 !important;
+    max-height: 560px !important;
+    aspect-ratio: auto !important;
+    margin-top: 0 !important;
+    border-radius: 20px !important;
+    border: 1px solid var(--gold-border) !important;
+    transform: none !important;
+    filter: none !important;
+    animation: shopBcCardIn 0.95s var(--shop-ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both !important;
+    opacity: 1 !important;
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.52),
+      0 0 18px rgba(201, 162, 39, 0.06) !important;
+    overflow: hidden !important;
+    background: #050403 !important;
+    transition:
+      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.55s ease,
+      border-color 0.55s ease !important;
+  }
 }
 
 #shop-atelier.is-open .shop-bc-card:hover {
@@ -668,6 +692,29 @@ html.theme-gold .shop-ambient-particle {
 
 /* —— Intro hero + showroom — mobile (≤767px) —— */
 @media (max-width: 767px) {
+  html.theme-gold .order-hero__inner {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  html.theme-gold .order-hero__editorial {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    margin: 0 auto !important;
+    justify-content: center !important;
+  }
+
+  html.theme-gold .order-hero__logo-glow {
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
   html.theme-gold .order-hero__micro {
     color: rgba(245, 232, 205, 0.92) !important;
     text-shadow:
