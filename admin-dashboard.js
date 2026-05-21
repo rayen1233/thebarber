@@ -224,6 +224,11 @@ function renderAccounts() {
   });
 }
 
+export function refreshAdminDashboard() {
+  renderOrders();
+  renderAccounts();
+}
+
 export function initAdminDashboard() {
   const navBtns = document.querySelectorAll("[data-admin-nav]");
   const sections = document.querySelectorAll("[data-admin-section]");
@@ -248,6 +253,5 @@ export function initAdminDashboard() {
     });
   });
 
-  renderOrders();
-  renderAccounts();
+  refreshAdminDashboard();
 }

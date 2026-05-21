@@ -26,6 +26,7 @@ import {
   MAX_IMAGE_UPLOAD_BYTES,
   CLIENT_UPLOAD_THRESHOLD_BYTES,
 } from "./lib/media-limits.js";
+import { mergeRecordsById } from "./lib/store-merge.mjs";
 
 const ADMIN_KEY_SESSION = "thebarber_admin_key_v1";
 const REMOTE_API_BASE_SESSION = "thebarber_remote_api_base_v1";
@@ -163,11 +164,25 @@ function applyStoreToLocal(data, opts = {}) {
     console.warn("[thebarber] serveur vide — produits locaux conservés (mode hors-ligne)");
   }
 
-  if (shouldApplyRemoteList(data.users, local.users, force)) {
-    localStorage.setItem(STORAGE_USERS, JSON.stringify(data.users));
+  const remoteUsers = Array.isArray(data.users) ? data.users : [];
+  const remoteOrders = Array.isArray(data.orders) ? data.orders : [];
+  if (remoteUsers.length > 0) {
+    const mergedUsers =
+      local.users.length > 0
+        ? mergeRecordsById(local.users, remoteUsers)
+        : remoteUsers;
+    localStorage.setItem(STORAGE_USERS, JSON.stringify(mergedUsers));
+  } else if (local.users.length === 0 && force) {
+    localStorage.setItem(STORAGE_USERS, JSON.stringify([]));
   }
-  if (shouldApplyRemoteList(data.orders, local.orders, force)) {
-    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(data.orders));
+  if (remoteOrders.length > 0) {
+    const mergedOrders =
+      local.orders.length > 0
+        ? mergeRecordsById(local.orders, remoteOrders)
+        : remoteOrders;
+    localStorage.setItem(STORAGE_ORDERS, JSON.stringify(mergedOrders));
+  } else if (local.orders.length === 0 && force) {
+    localStorage.setItem(STORAGE_ORDERS, JSON.stringify([]));
   }
 
   window.dispatchEvent(new CustomEvent("thebarber:products-updated"));
@@ -1107,12 +1122,33 @@ export async function patchRemoteUsersOrders() {
   return { ok: true };
 }
 
+let remoteSyncTimer = null;
+let remoteSyncInFlight = null;
+
 /** Fire-and-forget sync after local mutations on Vercel (users/orders only — never auto-push catalogue). */
 export function scheduleRemoteSync() {
   if (!isRemoteMode()) return;
-  void patchRemoteUsersOrders().catch((err) => {
-    console.warn("[thebarber] remote sync failed", err);
-  });
+  if (remoteSyncTimer) clearTimeout(remoteSyncTimer);
+  remoteSyncTimer = setTimeout(() => {
+    remoteSyncTimer = null;
+    remoteSyncInFlight = patchRemoteUsersOrders()
+      .catch((err) => {
+        console.warn("[thebarber] remote sync failed", err);
+      })
+      .finally(() => {
+        remoteSyncInFlight = null;
+      });
+  }, 400);
+}
+
+/** Await pending debounced sync (e.g. before navigation). */
+export async function flushRemoteSync() {
+  if (remoteSyncTimer) {
+    clearTimeout(remoteSyncTimer);
+    remoteSyncTimer = null;
+  }
+  if (remoteSyncInFlight) await remoteSyncInFlight;
+  else if (isRemoteMode()) await patchRemoteUsersOrders().catch(() => {});
 }
 
 /**

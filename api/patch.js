@@ -1,4 +1,5 @@
 import { applyApiCors } from "../lib/api-cors.mjs";
+import { mergeUsersOrdersIntoStore } from "../lib/store-merge.mjs";
 import { loadStore, saveStore } from "../lib/store-server.js";
 
 export const config = {
@@ -21,13 +22,7 @@ export default async function handler(req, res) {
 
   const body = req.body && typeof req.body === "object" ? req.body : {};
   const store = await loadStore();
-
-  if (Array.isArray(body.users)) {
-    store.users = body.users;
-  }
-  if (Array.isArray(body.orders)) {
-    store.orders = body.orders;
-  }
+  mergeUsersOrdersIntoStore(store, body);
 
   const saved = await saveStore(store);
   return res.status(200).json({

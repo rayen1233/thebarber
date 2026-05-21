@@ -160,6 +160,9 @@ export function registerUser(input) {
   list.push(user);
   saveUsers(list);
   setCurrentUser(user.id);
+  import("./shop-remote.js")
+    .then((m) => m.flushRemoteSync?.())
+    .catch(() => {});
   return { ok: true, user };
 }
 
@@ -221,6 +224,9 @@ export function createOrder(order) {
   const list = getOrders();
   list.unshift(order);
   saveOrders(list);
+  import("./shop-remote.js")
+    .then((m) => m.flushRemoteSync?.())
+    .catch(() => {});
   return order;
 }
 
