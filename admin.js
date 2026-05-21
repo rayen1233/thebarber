@@ -17,27 +17,27 @@ import {
 } from "./shop-media-store.js";
 import { saveUsers, saveOrders } from "./shop-account-store.js";
 import { initAdminDashboard } from "./admin-dashboard.js";
-import { whenStoreReady } from "./shop-bootstrap.js";
 import {
-  isRemoteMode,
-  getAdminKey,
-  setAdminKey,
-  hydrateAdminFromServer,
-  readLocalStorePayload,
-  pushRemoteStore,
   parseCatalogImportJson,
   migrateIdbVideosToRemote,
-  fetchRemoteStoreMeta,
-  pushProductToRemote,
-  deleteProductFromRemote,
-  replaceRemoteCatalog,
   restoreCatalogMediaFromSource,
-  usesRemoteCatalog,
+} from "./shop-remote.js";
+import {
+  getAdminCatalogProducts,
+  refreshAdminCatalog,
+  adminDeleteProduct,
+  adminSaveProduct,
+  adminReplaceCatalog,
+  initAdminCatalogConnection,
+  onAdminCatalogUpdated,
+  usesAdminDatabase,
   getRemoteApiBase,
   setRemoteApiBase,
   DEFAULT_REMOTE_API_BASE,
-} from "./shop-remote.js";
-import { setProductsMemoryCache } from "./shop-core.js";
+  getAdminKey,
+  setAdminKey,
+  isRemoteMode,
+} from "./shop-admin-catalog.js";
 
 function escapeHtml(s) {
   return String(s)
@@ -433,7 +433,7 @@ async function loadProductIntoForm(p) {
 function renderTable() {
   const tb = document.getElementById("admin-tbody");
   if (!tb) return;
-  const list = getProducts().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const list = getAdminCatalogProducts().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   if (!list.length) {
     tb.innerHTML =
       '<tr><td colspan="6" style="padding:1.5rem;color:#8a8680;">Aucun produit.</td></tr>';
@@ -460,7 +460,7 @@ function renderTable() {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-id");
       if (!id) return;
-      const p = getProducts().find((x) => x.id === id);
+      const p = getAdminCatalogProducts().find((x) => x.id === id);
       if (p) void loadProductIntoForm(p);
     });
   });
@@ -470,40 +470,28 @@ function renderTable() {
       const id = btn.getAttribute("data-id");
       if (!id || !confirm("Supprimer ce produit ?")) return;
       await ensureAdminRemoteKey();
-      if (!usesRemoteCatalog()) {
-        deleteProduct(id);
+      if (!getAdminKey() && usesAdminDatabase()) {
+        setAdminStatus("Clé admin requise.", "error");
+        return;
+      }
+      btn.disabled = true;
+      setAdminStatus("Suppression sur la base…");
+      try {
+        const out = await adminDeleteProduct(id);
         renderTable();
         setAdminStatus(
-          "Produit supprimé localement uniquement. Saisissez la clé admin pour supprimer sur Vercel.",
+          `Produit supprimé — ${out.productCount} produit(s) en base.`,
         );
-        return;
-      }
-      if (!getAdminKey()) {
-        setAdminStatus("Clé admin requise pour supprimer sur le serveur.", "error");
-        return;
-      }
-      setAdminStatus("Suppression sur le serveur…");
-      try {
-        const before = getProducts().length;
-        const out = await deleteProductFromRemote(id, {
-          onProgress: (msg) => setAdminStatus(msg),
-        });
-        deleteProduct(id);
-        renderTable();
-        const after = getProducts().length;
-        if (after >= before) {
-          setAdminStatus("Produit retiré de l’affichage — vérifiez le serveur.", "error");
-        } else {
-          setAdminStatus(
-            `Produit supprimé (${out.productCount ?? "?"} sur le serveur).`,
-          );
-        }
         void initRemoteSyncBanner();
       } catch (err) {
         const msg =
-          err instanceof Error ? err.message : "Suppression sur le serveur impossible.";
+          err instanceof Error ? err.message : "Suppression impossible.";
         setAdminStatus(msg, "error");
         alert(msg);
+        await refreshAdminCatalog().catch(() => {});
+        renderTable();
+      } finally {
+        btn.disabled = false;
       }
     });
   });
@@ -640,26 +628,26 @@ function main() {
 
     const finishSave = async (product) => {
       await ensureAdminRemoteKey();
-      if (usesRemoteCatalog()) {
-        setAdminStatus("Publication sur Vercel…");
-        const out = await pushProductToRemote(product, { onProgress: (msg) => setAdminStatus(msg) });
-        if (!out.ok) throw new Error(out.error || "Publication impossible.");
-      } else {
-        upsertProduct(product, { skipRemoteSync: true });
-      }
+      setAdminStatus("Enregistrement sur la base…");
+      const out = await adminSaveProduct(product, {
+        onProgress: (msg) => setAdminStatus(msg),
+      });
       renderTable();
       resetForm();
       setAdminStatus(
-        usesRemoteCatalog()
-          ? "Produit enregistré dans la base Vercel."
-          : "Produit enregistré localement. Saisissez la clé admin pour publier sur Vercel.",
+        `Produit enregistré — ${out.productCount} produit(s) en base.`,
       );
       void initRemoteSyncBanner();
     };
 
     try {
-      if (usesRemoteCatalog()) {
+      if (usesAdminDatabase() && getAdminKey()) {
         await finishSave(v.product);
+        return;
+      }
+      if (isRemoteMode() && !getAdminKey()) {
+        setAdminStatus("Clé admin requise pour enregistrer sur la base.", "error");
+        alert("Saisissez la clé admin (ADMIN_SECRET).");
         return;
       }
       upsertProduct(v.product, { skipRemoteSync: false });
@@ -734,7 +722,7 @@ function main() {
     const payload = {
       version: 1,
       exportedAt: new Date().toISOString(),
-      ...readLocalStorePayload(),
+      products: getAdminCatalogProducts(),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
@@ -749,9 +737,9 @@ function main() {
 
   document.getElementById("admin-import")?.addEventListener("click", async () => {
     await ensureAdminRemoteKey();
-    if (!usesRemoteCatalog()) {
+    if (!getAdminKey()) {
       const go = confirm(
-        "Sans clé admin, l’import reste uniquement dans ce navigateur (pas sur Vercel).\n\nContinuer en local uniquement ?",
+        "Sans clé admin, l’import reste uniquement dans ce navigateur.\n\nContinuer en local ?",
       );
       if (!go) return;
     }
@@ -806,39 +794,25 @@ function main() {
       )
         return;
       await ensureAdminRemoteKey();
-      if (usesRemoteCatalog()) {
-        if (!getAdminKey()) {
-          alert("Clé admin requise (ADMIN_SECRET sur Vercel) avant d’importer un gros catalogue.");
-          inp.value = "";
-          return;
-        }
+      if (usesAdminDatabase() && getAdminKey()) {
         try {
           const skipped = rows.length - cleaned.length;
-          await replaceRemoteCatalog(
-            {
-              products: cleaned,
-              users: parsed.users,
-              orders: parsed.orders,
-            },
-            { onProgress: (msg) => setAdminStatus(msg) },
-          );
-          setProductsMemoryCache(cleaned);
+          setAdminStatus("Import vers la base…");
+          const out = await adminReplaceCatalog(cleaned, {
+            users: parsed.users,
+            orders: parsed.orders,
+          });
           if (parsed.users.length) saveUsers(parsed.users);
           if (parsed.orders.length) saveOrders(parsed.orders);
-          try {
-            saveProducts(cleaned);
-          } catch {
-            /* catalogue trop lourd pour localStorage : serveur + mémoire suffisent */
-          }
           renderTable();
           const skipNote =
-            skipped > 0 ? ` (${skipped} entrée(s) ignorée(s) — catégorie ou photos invalides)` : "";
+            skipped > 0 ? ` (${skipped} ignorée(s))` : "";
           setAdminStatus(
-            `Import terminé : ${cleaned.length} produit(s) sur la base Vercel${skipNote} (${(file.size / 1024 / 1024).toFixed(1)} Mo).`,
+            `Import terminé : ${out.productCount} produit(s) en base${skipNote}.`,
           );
           setRemoteBannerStatus("Catalogue en ligne à jour.");
         } catch (err) {
-          const msg = err instanceof Error ? err.message : "Publication serveur impossible.";
+          const msg = err instanceof Error ? err.message : "Import impossible.";
           setAdminStatus(msg, "error");
           setRemoteBannerStatus(msg, true);
           alert(msg);
@@ -865,7 +839,7 @@ function main() {
 
   document.getElementById("admin-restore-media")?.addEventListener("click", async () => {
     await ensureAdminRemoteKey();
-    if (!usesRemoteCatalog()) {
+    if (!usesAdminDatabase() || !getAdminKey()) {
       alert("Clé admin + connexion Vercel requises (ou admin sur thebarber-three.vercel.app).");
       return;
     }
@@ -910,6 +884,7 @@ function main() {
       const result = await restoreCatalogMediaFromSource(parsed.products, {
         onProgress: (msg) => setAdminStatus(msg),
       });
+      await refreshAdminCatalog();
       renderTable();
       refreshMigrateVideosButton();
       const summary = `${result.updated} mis à jour, ${result.skipped} sans média dans le JSON, ${result.failed} erreur(s).`;
@@ -924,17 +899,12 @@ function main() {
 
   document.getElementById("admin-reload-server")?.addEventListener("click", async () => {
     await ensureAdminRemoteKey();
-    setAdminStatus("Rechargement depuis le serveur…");
+    setAdminStatus("Rechargement depuis la base…");
     try {
-      const h = await hydrateAdminFromServer();
+      const h = await refreshAdminCatalog();
       renderTable();
       void initRemoteSyncBanner();
-      setAdminStatus(
-        h.ok
-          ? `${getProducts().length} produit(s) affichés (serveur : ${h.productCount ?? "?"}).`
-          : "Échec du rechargement.",
-        !h.ok,
-      );
+      setAdminStatus(`${h.productCount ?? 0} produit(s) chargés depuis la base.`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Rechargement impossible.";
       setAdminStatus(msg, "error");
@@ -942,51 +912,22 @@ function main() {
     }
   });
 
-  document.getElementById("admin-push-server")?.addEventListener("click", async () => {
-    await ensureAdminRemoteKey();
-    if (!getAdminKey()) {
-      alert("Clé admin requise (variable ADMIN_SECRET sur Vercel).");
-      return;
-    }
-    try {
-      setAdminStatus("Synchronisation depuis le serveur…");
-      await hydrateAdminFromServer();
-      renderTable();
-      await pushRemoteStore(undefined, {
-        onProgress: (msg) => setAdminStatus(msg),
-      });
-      setAdminStatus("Catalogue publié sur le serveur Vercel.");
-      setRemoteBannerStatus("Catalogue en ligne à jour.");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Publication impossible.";
-      setAdminStatus(msg, "error");
-      setRemoteBannerStatus(msg, true);
-      alert(msg);
-    }
-  });
-
   document.getElementById("admin-clear-all")?.addEventListener("click", async () => {
     if (!confirm("Effacer tous les produits ET le panier ?")) return;
-    saveProducts([], { skipRemoteSync: true });
     localStorage.removeItem(STORAGE_CART);
-    setProductsMemoryCache(null);
-    renderTable();
     await ensureAdminRemoteKey();
-    if (!usesRemoteCatalog()) {
-      setAdminStatus("Catalogue effacé localement. Clé admin requise pour vider le serveur.", "error");
-      return;
-    }
     if (!getAdminKey()) {
-      setAdminStatus("Catalogue effacé localement. Clé admin requise pour vider le serveur.", "error");
+      setAdminStatus("Clé admin requise pour vider la base.", "error");
       return;
     }
-    setAdminStatus("Effacement du catalogue sur le serveur…");
+    setAdminStatus("Effacement de la base…");
     try {
-      await pushRemoteStore({ products: [], users: [], orders: [] });
-      setAdminStatus("Catalogue effacé.");
+      await adminReplaceCatalog([], { users: [], orders: [] });
+      renderTable();
+      setAdminStatus("Catalogue effacé sur la base.");
       void initRemoteSyncBanner();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Effacement serveur impossible.";
+      const msg = err instanceof Error ? err.message : "Effacement impossible.";
       setAdminStatus(msg, "error");
       alert(msg);
     }
@@ -995,7 +936,7 @@ function main() {
   function refreshMigrateVideosButton() {
     const btn = document.getElementById("admin-migrate-videos");
     if (!btn) return;
-    const hasIdb = getProducts().some((p) => isIdbVideoRef(p.videoUrl));
+    const hasIdb = getAdminCatalogProducts().some((p) => isIdbVideoRef(p.videoUrl));
     btn.hidden = isRemoteMode() || !hasIdb;
   }
 
@@ -1016,7 +957,7 @@ function main() {
       alert("Clé admin requise.");
       return;
     }
-    const n = getProducts().filter((p) => isIdbVideoRef(p.videoUrl)).length;
+    const n = getAdminCatalogProducts().filter((p) => isIdbVideoRef(p.videoUrl)).length;
     if (
       !confirm(
         `Envoyer ${n} vidéo(s) depuis ce navigateur vers Vercel Blob ?\n\nGardez le même navigateur où vous avez créé les produits.`,
@@ -1079,12 +1020,12 @@ function initLocalhostDbPanel() {
       return;
     }
     setAdminStatus("Connexion à la base Vercel…");
-    const h = await hydrateAdminFromServer();
+    const h = await refreshAdminCatalog();
     renderTable();
     void initRemoteSyncBanner();
     setAdminStatus(
       h.ok
-        ? `Connecté — ${h.productCount ?? getProducts().length} produit(s) chargés depuis le serveur.`
+        ? `Connecté — ${h.productCount ?? 0} produit(s) chargés depuis la base.`
         : "Connexion impossible — vérifiez l’URL et la clé admin.",
       !h.ok,
     );
@@ -1094,17 +1035,16 @@ function initLocalhostDbPanel() {
 async function initRemoteSyncBanner() {
   const banner = document.getElementById("admin-remote-banner");
   if (!banner) return;
-  if (!isRemoteMode() && !usesRemoteCatalog()) return;
+  if (!isRemoteMode() && !usesAdminDatabase()) return;
   banner.hidden = false;
-  const n = getProducts().length;
+  const n = getAdminCatalogProducts().length;
   try {
     const healthUrl = isRemoteMode() ? "/api/health" : `${getRemoteApiBase()}/api/health`;
     const healthRes = await fetch(healthUrl, { cache: "no-store" });
     const health = healthRes.ok ? await healthRes.json().catch(() => ({})) : {};
-    const meta = await fetchRemoteStoreMeta();
     const serverCount =
-      typeof health.productCount === "number" ? health.productCount : meta.productCount;
-    const dbOk = health.ok !== false && meta.blobConfigured;
+      typeof health.productCount === "number" ? health.productCount : n;
+    const dbOk = health.ok !== false && health.env?.blob !== false;
 
     if (!dbOk) {
       setRemoteBannerStatus(
@@ -1144,44 +1084,35 @@ async function ensureAdminRemoteKey() {
 }
 
 function bindAdminStoreRefresh() {
-  const refresh = () => {
+  onAdminCatalogUpdated(() => {
     renderTable();
     refreshMigrateVideosButton();
     void initRemoteSyncBanner();
-  };
-  window.addEventListener("thebarber:store-hydrated", refresh);
-  window.addEventListener("thebarber:products-updated", refresh);
+  });
 }
 
 async function bootAdmin() {
-  await whenStoreReady();
   initLocalhostDbPanel();
   bindAdminStoreRefresh();
-  if (isRemoteMode()) {
-    await ensureAdminRemoteKey();
-    const hydrated = await hydrateAdminFromServer();
-    if (!hydrated.ok) {
+  await ensureAdminRemoteKey();
+  if (getAdminKey() || isRemoteMode()) {
+    try {
+      const h = await initAdminCatalogConnection();
+      if (!h.ok && h.reason === "no-key" && isRemoteMode()) {
+        setAdminStatus("Saisissez la clé admin pour lier la base Vercel.", "error");
+      } else if (h.ok) {
+        setAdminStatus(`${h.productCount ?? 0} produit(s) — base serveur connectée.`);
+      }
+    } catch (err) {
       setAdminStatus(
-        "Catalogue serveur inaccessible — vérifiez la connexion et /api/health.",
+        err instanceof Error ? err.message : "Connexion base impossible.",
         "error",
       );
-    } else {
-      const n = getProducts().length;
-      const remoteN = hydrated.productCount ?? n;
-      if (n === 0 && remoteN > 0) {
-        setAdminStatus(
-          `Le serveur a ${remoteN} produit(s) mais l’affichage est vide — rechargez la page (Ctrl+F5).`,
-          "error",
-        );
-      }
     }
-  } else if (getAdminKey()) {
-    const hydrated = await hydrateAdminFromServer();
-    if (hydrated.ok) {
-      setAdminStatus(
-        `Catalogue serveur : ${hydrated.productCount ?? getProducts().length} produit(s).`,
-      );
-    }
+  } else {
+    const { getProducts } = await import("./shop-core.js");
+    const { refreshAdminCatalog: refreshLocal } = await import("./shop-admin-catalog.js");
+    await refreshLocal().catch(() => {});
   }
   const videoHint = document.getElementById("admin-video-hint");
   if (videoHint && isRemoteMode()) videoHint.style.display = "block";

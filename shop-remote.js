@@ -642,7 +642,6 @@ export async function restoreCatalogMediaFromSource(sourceProducts, opts = {}) {
     }
   }
 
-  await hydrateAdminFromServer();
   return { updated, skipped, failed, total: serverList.length };
 }
 

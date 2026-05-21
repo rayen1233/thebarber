@@ -153,15 +153,12 @@
             >
               <h2 style="margin-top: 0">Données sur Vercel</h2>
               <p class="lede" style="margin: 0 0 1rem; max-width: 52rem">
-                L’admin est relié à la <strong>base serveur</strong> (Vercel Blob). Le catalogue affiché vient du serveur
-                au chargement ; les suppressions et enregistrements mettent à jour la base avant confirmation.
+                Catalogue relié à la <strong>base Vercel</strong> via <code>/api/admin/catalog</code>. Chaque action
+                (ajout, suppression, import) lit ou écrit directement la base — pas de copie locale parallèle.
               </p>
               <div class="admin-row-actions">
-                <button type="button" class="shop-btn-ghost" id="admin-reload-server">
-                  Recharger depuis le serveur
-                </button>
-                <button type="button" class="shop-btn-primary" id="admin-push-server">
-                  Republier le catalogue affiché
+                <button type="button" class="shop-btn-primary" id="admin-reload-server">
+                  Recharger depuis la base
                 </button>
               </div>
               <p id="admin-remote-status" class="lede" style="margin: 1rem 0 0; font-size: 0.85rem" aria-live="polite"></p>
@@ -250,7 +247,7 @@
       </main>
     </div>
     <script type="module" src="./barber-theme.js"></script>
-    <script type="module" src="./shop-bootstrap.js?v=20260521-db"></script>
-    <script type="module" src="./admin.js?v=20260522-del2"></script>
+    <script type="module" src="./shop-admin-catalog.js?v=20260523-db2"></script>
+    <script type="module" src="./admin.js?v=20260523-db2"></script>
   </body>
 </html>
