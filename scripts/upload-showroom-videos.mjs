@@ -18,6 +18,27 @@ const PAIRS = [
   ["backgroundmarchandise.mp4", "thebarber/showroom/backgroundmarchandise.mp4"],
 ];
 
+function loadEnvLocal() {
+  for (const name of [".env.local", ".env"]) {
+    const p = path.join(process.cwd(), name);
+    if (!fs.existsSync(p)) continue;
+    for (const line of fs.readFileSync(p, "utf8").split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+      if (!m) continue;
+      const key = m[1];
+      if (process.env[key]?.trim()) continue;
+      let val = m[2].trim();
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
+        val = val.slice(1, -1);
+      }
+      process.env[key] = val;
+    }
+  }
+}
+
 function resolveLocalFile(name) {
   const candidates = [
     path.join(process.cwd(), "public", name),
@@ -30,6 +51,7 @@ function resolveLocalFile(name) {
 }
 
 async function main() {
+  loadEnvLocal();
   if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
     console.error(
       "BLOB_READ_WRITE_TOKEN manquant. Copiez .env.local depuis Vercel ou lancez avec vercel env pull.",
