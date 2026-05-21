@@ -1,6 +1,7 @@
 /**
- * Copy public/ assets to site root so Vercel serves them at /file.ext
- * (same paths as local dev with public/ prefix fallbacks).
+ * Vercel build prep:
+ * - copy public/ → root (backgrounds, videos, etc.)
+ * - copy intro.html → index.html (Vercel serves index.html at / before rewrites)
  */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -24,7 +25,8 @@ try {
   for (const name of entries) {
     await copyEntry(name);
   }
-  console.log("[prepare-vercel] public/ copied to root");
+  await fs.copyFile(path.join(root, "intro.html"), path.join(root, "index.html"));
+  console.log("[prepare-vercel] public/ → root, intro.html → index.html");
 } catch (err) {
   console.error("[prepare-vercel] failed", err);
   process.exit(1);

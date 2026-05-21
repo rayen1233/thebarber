@@ -5,6 +5,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="./logo.png" />
     <script src="./barber-theme-boot.js"></script>
+    <script>
+      /* Safety: never leave a blank page if intro / modules stall */
+      setTimeout(function () {
+        if (!document.body.classList.contains("intro-reveal")) {
+          document.body.classList.add("intro-reveal");
+          var introEl = document.getElementById("intro");
+          if (introEl) introEl.classList.add("is-done");
+          if (window.barberOrderHeroReveal) window.barberOrderHeroReveal();
+        }
+      }, 5500);
+    </script>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
