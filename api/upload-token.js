@@ -57,7 +57,7 @@ export default async function handler(req, res) {
   const size = Number(row.size) || 0;
   if (size > MAX_VIDEO_BYTES) {
     return res.status(413).json({
-      error: `Fichier trop lourd (${(size / (1024 * 1024)).toFixed(1)} Mo). Maximum 10 Mo.`,
+      error: `Fichier trop lourd (${(size / (1024 * 1024)).toFixed(1)} Mo). Maximum 6 Mo.`,
     });
   }
 

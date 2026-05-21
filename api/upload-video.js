@@ -1,6 +1,6 @@
 /**
  * Upload vidéo via le serveur (même origine → pas de CORS vercel.com).
- * Limite ~4 Mo sur Vercel (corps de requête). Au-delà : /api/upload-token + put() client.
+ * Un seul POST (≤ ~3,4 Mo). Vidéos plus lourdes : /api/upload-video-chunk.
  */
 import { put } from "@vercel/blob";
 import { applyApiCors } from "../lib/api-cors.mjs";
@@ -8,7 +8,7 @@ import { requireAdmin } from "../lib/store-server.js";
 import { getMediaBlobAccess } from "../lib/blob-access.mjs";
 import { blobSdkAuthOptions } from "../lib/blob-sdk-auth.mjs";
 import { catalogUrlFromBlobUpload } from "../lib/blob-media-url.mjs";
-import { MAX_VIDEO_BYTES } from "../lib/media-limits.mjs";
+import { MAX_BLOB_UPLOAD_VIDEO_BYTES } from "../lib/media-limits.mjs";
 
 export const config = {
   api: {
@@ -48,9 +48,9 @@ export default async function handler(req, res) {
     for await (const chunk of req) {
       const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       size += buf.length;
-      if (size > MAX_VIDEO_BYTES) {
+      if (size > MAX_BLOB_UPLOAD_VIDEO_BYTES) {
         return res.status(413).json({
-          error: `Vidéo trop lourde (${(size / (1024 * 1024)).toFixed(1)} Mo). Maximum 10 Mo.`,
+          error: `Fichier trop lourd (${(size / (1024 * 1024)).toFixed(1)} Mo, max 6 Mo). Utilisez l’upload par morceaux ou une URL externe.`,
         });
       }
       chunks.push(buf);
@@ -106,7 +106,7 @@ export default async function handler(req, res) {
     return res.status(status).json({
       error:
         status === 413
-          ? "Fichier trop lourd pour l’upload serveur (~4 Mo max). Utilisez une vidéo plus légère ou réessayez (upload direct > 4 Mo)."
+          ? "Fichier trop lourd pour un seul envoi (~3,4 Mo). Réessayez (upload automatique par morceaux) ou compressez."
           : msg,
     });
   }

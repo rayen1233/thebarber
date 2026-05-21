@@ -23,7 +23,7 @@ import {
   parseCatalogImportJson,
   migrateIdbVideosToRemote,
   restoreCatalogMediaFromSource,
-} from "./shop-remote.js?v=20260521-video4";
+} from "./shop-remote.js?v=20260521-video6";
 import {
   getAdminCatalogProducts,
   refreshAdminCatalog,
@@ -614,7 +614,7 @@ function main() {
     if (!f || !(urlInp instanceof HTMLInputElement)) return;
     if (f.size > MAX_VIDEO_BYTES) {
       alert(
-        "Vidéo trop volumineuse (maximum 10 Mo). Compressez la vidéo, utilisez une URL externe, ou réduisez la durée.",
+        "Vidéo trop volumineuse (maximum 6 Mo). Compressez la vidéo, utilisez une URL externe, ou réduisez la durée.",
       );
       videoFile.value = "";
       return;
@@ -622,8 +622,8 @@ function main() {
     setAdminStatus("Lecture de la vidéo…");
     try {
       if ((isRemoteMode() || getAdminKey()) && usesAdminDatabase()) {
-        const { uploadMediaBlob } = await import("./shop-remote.js?v=20260521-video4");
-        setAdminStatus("Envoi de la vidéo vers Vercel (max 10 Mo)…");
+        const { uploadMediaBlob } = await import("./shop-remote.js?v=20260521-video6");
+        setAdminStatus("Envoi de la vidéo vers Vercel (max 6 Mo)…");
         const { normalizeVideoUrlForCatalog } = await import("./lib/blob-media-url.mjs");
         const url = await uploadMediaBlob(f, f.name || "video.mp4", {
           onProgress: (p) => {

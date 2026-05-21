@@ -21,11 +21,11 @@ import {
 } from "./shop-store-idb.js";
 import {
   MAX_VIDEO_BYTES,
+  MAX_BLOB_UPLOAD_VIDEO_BYTES,
+  VIDEO_SINGLE_POST_MAX_BYTES,
   MAX_IMAGE_UPLOAD_BYTES,
   CLIENT_UPLOAD_THRESHOLD_BYTES,
 } from "./lib/media-limits.js";
-import { catalogUrlFromBlobUpload } from "./lib/blob-media-url.mjs";
-import { loadBlobClientPut } from "./lib/blob-client-upload.js";
 
 const ADMIN_KEY_SESSION = "thebarber_admin_key_v1";
 const REMOTE_API_BASE_SESSION = "thebarber_remote_api_base_v1";
@@ -757,22 +757,26 @@ function mediaPathnameForUpload(filename, blob, fallbackId = "") {
 }
 
 /**
- * Vidéos / gros fichiers : upload direct navigateur → Blob (max 10 Mo).
+ * Vidéos : upload via notre API serveur (max 6 Mo, morceaux si besoin).
  * @param {Blob | File} blob
  * @param {string} filename
  * @param {{ baseUrl?: string, adminKey?: string, contentType?: string, onProgress?: (p: { percentage: number }) => void }} [opts]
  */
-const MAX_SERVER_VIDEO_PROXY_BYTES = 4_200_000;
+const BLOB_VIDEO_TOO_LARGE_MSG =
+  "Vidéo trop lourde (maximum 6 Mo). Compressez-la ou collez une URL externe (lien MP4, YouTube…) dans le champ « Vidéo ».";
+
+const VIDEO_CHUNK_BYTES = 3 * 1024 * 1024;
 
 /**
- * Upload vidéo via POST binaire sur notre API (évite CORS vercel.com).
+ * Upload vidéo via POST binaire sur notre API (même origine — pas d’appel vercel.com/api/blob).
  * @param {Blob | File} blob
  * @param {string} pathname
- * @param {{ baseUrl?: string, adminKey?: string, contentType?: string }} opts
+ * @param {{ baseUrl?: string, adminKey?: string, contentType?: string, onProgress?: (p: { percentage: number }) => void }} opts
  */
 async function uploadVideoViaServerProxy(blob, pathname, opts = {}) {
   const baseUrl = remoteApiBaseForUpload(opts);
   const key = opts.adminKey || getAdminKey();
+  opts.onProgress?.({ percentage: 0 });
   const res = await fetch(
     `${baseUrl}/api/upload-video?pathname=${encodeURIComponent(pathname)}`,
     {
@@ -790,7 +794,84 @@ async function uploadVideoViaServerProxy(blob, pathname, opts = {}) {
   if (!res.ok) {
     throw new Error(data.error || `Upload serveur refusé (${res.status})`);
   }
+  opts.onProgress?.({ percentage: 100 });
   return String(data.url || "");
+}
+
+/**
+ * Vidéos 3,4–6 Mo : morceaux via notre API (pas de CORS vercel.com).
+ * @param {Blob | File} blob
+ * @param {string} pathname
+ * @param {{ baseUrl?: string, adminKey?: string, contentType?: string, onProgress?: (p: { percentage: number }) => void }} opts
+ */
+async function uploadVideoViaChunks(blob, pathname, opts = {}) {
+  const baseUrl = remoteApiBaseForUpload(opts);
+  const key = opts.adminKey || getAdminKey();
+  const authHeaders = {
+    Authorization: `Bearer ${key}`,
+    "X-Admin-Key": key,
+    "Content-Type": "application/json",
+  };
+  const contentType = opts.contentType || blob.type || "video/mp4";
+  const totalSize = blob.size;
+
+  const startRes = await fetch(`${baseUrl}/api/upload-video-chunk?action=start`, {
+    method: "POST",
+    cache: "no-store",
+    headers: authHeaders,
+    body: JSON.stringify({ totalSize, pathname }),
+  });
+  const startData = await startRes.json().catch(() => ({}));
+  if (!startRes.ok) {
+    throw new Error(startData.error || `Démarrage upload refusé (${startRes.status})`);
+  }
+  const sessionId = String(startData.sessionId || "");
+  if (!sessionId) throw new Error("Session upload vidéo invalide");
+
+  const partCount = Math.ceil(totalSize / VIDEO_CHUNK_BYTES);
+  for (let i = 0; i < partCount; i++) {
+    const start = i * VIDEO_CHUNK_BYTES;
+    const slice = blob.slice(start, Math.min(start + VIDEO_CHUNK_BYTES, totalSize));
+    const chunkRes = await fetch(
+      `${baseUrl}/api/upload-video-chunk?action=chunk&sessionId=${encodeURIComponent(sessionId)}&index=${i}&totalSize=${totalSize}`,
+      {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "X-Admin-Key": key,
+          "Content-Type": "application/octet-stream",
+        },
+        body: slice,
+      },
+    );
+    const chunkData = await chunkRes.json().catch(() => ({}));
+    if (!chunkRes.ok) {
+      throw new Error(chunkData.error || `Morceau ${i + 1}/${partCount} refusé`);
+    }
+    opts.onProgress?.({
+      percentage: Math.round(((i + 1) / partCount) * 90),
+    });
+  }
+
+  const commitRes = await fetch(`${baseUrl}/api/upload-video-chunk?action=commit`, {
+    method: "POST",
+    cache: "no-store",
+    headers: authHeaders,
+    body: JSON.stringify({
+      sessionId,
+      pathname,
+      partCount,
+      totalSize,
+      contentType,
+    }),
+  });
+  const commitData = await commitRes.json().catch(() => ({}));
+  if (!commitRes.ok) {
+    throw new Error(commitData.error || `Finalisation upload refusée (${commitRes.status})`);
+  }
+  opts.onProgress?.({ percentage: 100 });
+  return String(commitData.url || "");
 }
 
 async function uploadMediaBlobViaClient(blob, filename, opts = {}) {
@@ -801,90 +882,26 @@ async function uploadMediaBlobViaClient(blob, filename, opts = {}) {
 
   if (blob.size > MAX_VIDEO_BYTES) {
     throw new Error(
-      `Fichier trop lourd (${(blob.size / (1024 * 1024)).toFixed(1)} Mo). Maximum 10 Mo pour les vidéos.`,
+      `Fichier trop lourd (${(blob.size / (1024 * 1024)).toFixed(1)} Mo). Maximum 10 Mo.`,
     );
+  }
+  if (blob.size > MAX_BLOB_UPLOAD_VIDEO_BYTES) {
+    throw new Error(BLOB_VIDEO_TOO_LARGE_MSG);
   }
 
   const pathname = mediaPathnameForUpload(filename, blob);
+  const contentType = opts.contentType || blob.type || "video/mp4";
+  const uploadOpts = { ...opts, contentType };
 
-  if (blob.size <= MAX_SERVER_VIDEO_PROXY_BYTES) {
-    try {
-      const url = await uploadVideoViaServerProxy(blob, pathname, {
-        ...opts,
-        contentType: opts.contentType || blob.type || "video/mp4",
-      });
-      if (url) return url;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!/too lourd|413|4 Mo|payload/i.test(msg)) throw err;
-      console.warn("[thebarber] proxy vidéo serveur échoué, essai upload direct", msg);
-    }
+  if (blob.size <= VIDEO_SINGLE_POST_MAX_BYTES) {
+    const url = await uploadVideoViaServerProxy(blob, pathname, uploadOpts);
+    if (!url) throw new Error("Upload vidéo terminé mais URL catalogue vide.");
+    return url;
   }
 
-  const put = await loadBlobClientPut();
-  const authHeaders = {
-    Authorization: `Bearer ${key}`,
-    "X-Admin-Key": key,
-    "Content-Type": "application/json",
-  };
-
-  async function fetchClientToken(access) {
-    const res = await fetch(`${baseUrl}/api/upload-token`, {
-      method: "POST",
-      cache: "no-store",
-      headers: authHeaders,
-      body: JSON.stringify({
-        pathname,
-        access,
-        contentType: opts.contentType || blob.type || "application/octet-stream",
-        size: blob.size,
-        multipart: blob.size > 4_500_000,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(data.error || `Jeton upload refusé (${res.status})`);
-    }
-    return data;
-  }
-
-  const putOpts = {
-    contentType: opts.contentType || blob.type || "application/octet-stream",
-    multipart: blob.size > 4_500_000,
-    onUploadProgress: opts.onProgress,
-  };
-
-  let result;
-  let access = "public";
-  try {
-    const tokenData = await fetchClientToken("public");
-    access = tokenData.access === "private" ? "private" : "public";
-    result = await put(pathname, blob, {
-      ...putOpts,
-      access,
-      token: String(tokenData.clientToken || ""),
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!/access|forbidden|private|BlobAccess/i.test(msg)) throw err;
-    const tokenData = await fetchClientToken("private");
-    access = "private";
-    result = await put(pathname, blob, {
-      ...putOpts,
-      access: "private",
-      token: String(tokenData.clientToken || ""),
-    });
-  }
-
-  const catalogUrl = catalogUrlFromBlobUpload(
-    result,
-    String(result.pathname || pathname),
-    access,
-  );
-  if (!catalogUrl) {
-    throw new Error("Upload vidéo terminé mais URL catalogue vide — vérifiez BLOB_READ_WRITE_TOKEN sur Vercel.");
-  }
-  return catalogUrl;
+  const url = await uploadVideoViaChunks(blob, pathname, uploadOpts);
+  if (!url) throw new Error("Upload vidéo terminé mais URL catalogue vide.");
+  return url;
 }
 
 function remoteApiBaseForUpload(opts = {}) {
@@ -1019,7 +1036,7 @@ export async function migrateIdbVideosToRemote(opts) {
     if (blob.size > MAX_REMOTE_VIDEO_BYTES) {
       skipped++;
       opts.onProgress?.(
-        `  → ignoré (${(blob.size / 1024 / 1024).toFixed(1)} Mo, max ~11 Mo)`,
+        `  → ignoré (${(blob.size / 1024 / 1024).toFixed(1)} Mo, max 6 Mo)`,
       );
       continue;
     }
