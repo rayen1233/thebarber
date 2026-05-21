@@ -155,14 +155,31 @@ function isShowroomOpen() {
   return Boolean(el?.classList.contains("is-open") && !el.classList.contains("is-closing"));
 }
 
+function isProductionSite() {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return host !== "localhost" && host !== "127.0.0.1";
+}
+
+/** Scroll container for stacked mobile layout (IntersectionObserver root). */
+function showroomObserverRoot() {
+  return (
+    document.querySelector("#order-showroom .showroom-split") ||
+    document.getElementById("order-showroom")
+  );
+}
+
 /** @type {IntersectionObserver | null} */
 let showroomVideoObserver = null;
 /** @type {IntersectionObserver | null} */
 let showroomPanelLazyObserver = null;
 
 function bindShowroomPanelLazyVideo() {
-  if (showroomPanelLazyObserver) return;
-  const root = document.getElementById("order-showroom");
+  if (showroomPanelLazyObserver) {
+    showroomPanelLazyObserver.disconnect();
+    showroomPanelLazyObserver = null;
+  }
+  const root = showroomObserverRoot();
   showroomPanelLazyObserver = new IntersectionObserver(
     (entries) => {
       if (!isShowroomOpen()) return;
@@ -195,8 +212,11 @@ function observeShowroomPanelVideo(video) {
 }
 
 function bindShowroomVideoVisibility() {
-  if (showroomVideoObserver) return;
-  const root = document.getElementById("order-showroom");
+  if (showroomVideoObserver) {
+    showroomVideoObserver.disconnect();
+    showroomVideoObserver = null;
+  }
+  const root = showroomObserverRoot();
   showroomVideoObserver = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
@@ -274,8 +294,9 @@ async function resolveFirstAssetUrl(urls) {
 async function resolveShowroomVideoUrl(i) {
   const blob = blobVideoUrlForIndex(i);
   if (blob) {
+    const abs = new URL(blob, document.baseURI || window.location.href).href;
+    if (isProductionSite()) return abs;
     try {
-      const abs = new URL(blob, document.baseURI || window.location.href).href;
       const res = await fetch(abs, {
         method: "GET",
         headers: { Range: "bytes=0-1" },
@@ -288,6 +309,28 @@ async function resolveShowroomVideoUrl(i) {
   }
   const rest = videoCandidatesForIndex(i).filter((u) => u !== blob);
   return resolveFirstAssetUrl(rest);
+}
+
+/** Charge les vidéos Blob déjà résolues (évite lazy-load qui ne se déclenche pas). */
+async function primeShowroomVideos() {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce || !isShowroomOpen()) return;
+  const order = isShowroomStackLayout() ? [0, 1, 2, 3] : [0, 1, 2, 3];
+  for (const i of order) {
+    if (!pendingShowroomVideoUrl.has(i)) continue;
+    await loadShowroomVideoForPanel(i);
+  }
+  syncShowroomVideoPlayback();
+}
+
+async function ensureShowroomVideoUrls() {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) return;
+  for (let i = 0; i < 4; i++) {
+    if (pendingShowroomVideoUrl.has(i)) continue;
+    const hit = await resolveShowroomVideoUrl(i);
+    if (hit) pendingShowroomVideoUrl.set(i, hit);
+  }
 }
 
 /** @param {number} i */
@@ -452,6 +495,7 @@ async function applyShowroomBackgrounds() {
   }
 
   bindShowroomPanelLazyVideo();
+  if (isShowroomOpen()) void primeShowroomVideos();
 }
 
 function pauseShowroomPanelVideos() {
@@ -632,16 +676,19 @@ function openShowroom() {
     document.body.classList.remove("showroom-route-opening");
   }, SHOWROOM_ROUTE_MS);
 
-  if (!inited) {
-    inited = true;
-    void applyShowroomBackgrounds();
-    waitShowroomOpacitySettled()
-      .then(() => waitForPanelEntranceDone())
-      .then(() => waitForLayoutFrames())
-      .catch((err) => {
-        console.error("[showroom] init failed", err);
-      });
-  }
+  void (async () => {
+    try {
+      if (!inited) {
+        inited = true;
+        await applyShowroomBackgrounds();
+      } else {
+        await ensureShowroomVideoUrls();
+        await primeShowroomVideos();
+      }
+    } catch (err) {
+      console.error("[showroom] media init failed", err);
+    }
+  })();
 }
 
 function closeShowroom() {
