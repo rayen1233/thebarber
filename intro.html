@@ -4094,8 +4094,23 @@
           animation: none;
         }
 
+        .order-hero__stage,
+        .order-hero__imgbox {
+          overflow: hidden;
+        }
+
+        .order-hero__scaler {
+          inset: 0;
+          transform: scale(1.04);
+          transform-origin: 50% 38%;
+        }
+
         .order-hero__bg {
+          object-fit: cover;
           object-position: 50% 38%;
+          width: 100%;
+          height: 100%;
+          max-width: none;
         }
 
         .order-hero__spot-dim {
@@ -4182,9 +4197,14 @@
         .order-hero__micro {
           margin-top: clamp(0.85rem, 2.8vh, 1.35rem);
           max-width: 32ch;
-          letter-spacing: 0.3em;
-          font-size: clamp(0.4rem, 2.6vw, 0.48rem);
-          line-height: 1.55;
+          padding: 0 0.35rem;
+          letter-spacing: 0.22em;
+          font-size: clamp(0.44rem, 2.8vw, 0.52rem);
+          line-height: 1.6;
+          color: rgba(245, 232, 205, 0.9);
+          text-shadow:
+            0 1px 10px rgba(0, 0, 0, 0.88),
+            0 2px 22px rgba(0, 0, 0, 0.72);
         }
 
         .order-hero__cta-wrap {
@@ -4231,7 +4251,8 @@
         }
 
         .order-hero__micro {
-          letter-spacing: 0.24em;
+          letter-spacing: 0.18em;
+          font-size: clamp(0.42rem, 2.6vw, 0.48rem);
         }
 
         .order-hero__cta {
@@ -4260,6 +4281,153 @@
 
         .order-hero__cta {
           min-height: 46px;
+        }
+      }
+
+      /* —— Showroom mobile (1-column stack, contained labels) —— */
+      @media (max-width: 767px) {
+        #order-showroom {
+          --split-vx: 50%;
+          --split-hy: 50%;
+        }
+
+        #order-showroom .showroom-split {
+          padding:
+            calc(env(safe-area-inset-top, 0px) + 3.35rem)
+            clamp(0.45rem, 2vw, 0.65rem)
+            max(0.45rem, env(safe-area-inset-bottom, 0px));
+        }
+
+        .showroom-split__vline,
+        .showroom-split__hline {
+          display: none;
+        }
+
+        .showroom-close {
+          z-index: 10090;
+        }
+
+        .showroom-split__panels {
+          grid-template-columns: 1fr !important;
+          grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+          gap: clamp(0.3rem, 1.2vw, 0.45rem);
+          --split-vx: 50% !important;
+          --split-hy: 50% !important;
+          transition: none !important;
+        }
+
+        .showroom-split__panels > .showroom-panel:nth-child(1) {
+          grid-column: 1;
+          grid-row: 1;
+        }
+
+        .showroom-split__panels > .showroom-panel:nth-child(2) {
+          grid-column: 1;
+          grid-row: 2;
+        }
+
+        .showroom-split__panels > .showroom-panel:nth-child(3) {
+          grid-column: 1;
+          grid-row: 3;
+        }
+
+        .showroom-split__panels > .showroom-panel:nth-child(4) {
+          grid-column: 1;
+          grid-row: 4;
+        }
+
+        .showroom-panel {
+          min-height: clamp(7.25rem, 22vh, 10.5rem);
+          overflow: hidden;
+        }
+
+        .showroom-panel--text-outside-left .showroom-panel__content,
+        .showroom-panel--text-outside-right .showroom-panel__content {
+          flex-direction: column;
+          justify-content: flex-end;
+          align-items: stretch;
+        }
+
+        .showroom-panel__bottom {
+          position: relative;
+          z-index: 32;
+          width: 100%;
+          max-width: 100%;
+          flex-shrink: 0;
+          align-items: center !important;
+          text-align: center !important;
+          padding: 0.8rem 0.7rem 0.85rem !important;
+        }
+
+        .showroom-panel--text-outside-left .showroom-panel__bottom,
+        .showroom-panel--text-outside-right .showroom-panel__bottom {
+          padding-left: 0.7rem !important;
+          padding-right: 0.7rem !important;
+        }
+
+        .showroom-panel__title {
+          font-size: clamp(1.1rem, 5vw, 1.6rem) !important;
+          line-height: 1.08 !important;
+          letter-spacing: -0.02em !important;
+          text-transform: none !important;
+          max-width: 100%;
+          margin: 0;
+          overflow-wrap: anywhere;
+          word-break: normal;
+          hyphens: none;
+        }
+
+        .showroom-split__panels > .showroom-panel:nth-child(1) .showroom-panel__title {
+          white-space: nowrap;
+        }
+
+        .showroom-split__panels > .showroom-panel:nth-child(2) .showroom-panel__title,
+        .showroom-split__panels > .showroom-panel:nth-child(3) .showroom-panel__title,
+        .showroom-split__panels > .showroom-panel:nth-child(4) .showroom-panel__title {
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          overflow: hidden;
+          white-space: normal;
+        }
+
+        .showroom-panel__cta {
+          align-self: center;
+          margin-top: 0.5rem !important;
+          min-height: 44px;
+          height: 44px;
+          min-width: min(10.5rem, 70vw);
+          max-width: calc(100% - 1rem);
+          padding: 0 1.25rem !important;
+          letter-spacing: 0.14em !important;
+          font-size: 0.62rem !important;
+        }
+
+        .showroom-panel--text-outside-left .showroom-panel__frost,
+        .showroom-panel--text-outside-right .showroom-panel__frost {
+          mask-image: none;
+          -webkit-mask-image: none;
+        }
+
+        .showroom-panel__media {
+          overflow: hidden;
+        }
+
+        .showroom-panel__img,
+        .showroom-panel__video {
+          object-fit: cover;
+        }
+
+        .showroom-split__panels:has(> .showroom-panel:hover)
+          > .showroom-panel:not(:hover) {
+          opacity: 1 !important;
+        }
+
+        .showroom-split__panels:has(> .showroom-panel:hover)
+          > .showroom-panel:not(:hover)
+          .showroom-panel__title {
+          opacity: 1 !important;
+          transform: none !important;
         }
       }
 
@@ -5410,6 +5578,7 @@
     <!-- Typography + gold luxury layer (after shop + inline) -->
     <link rel="stylesheet" href="./barber-typography.css?v=20260515-73" />
     <link rel="stylesheet" href="./barber-theme-gold.css?v=20260521-6" />
+    <link rel="stylesheet" href="./barber-theme-mono-override.css?v=20260521-mobile" />
   </head>
   <body>
     <div id="page-scroll-root" class="page-scroll-root">

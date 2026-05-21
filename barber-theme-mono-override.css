@@ -2650,6 +2650,86 @@ body.theme-mono .cine-logo-lit {
   -webkit-filter: none !important;
 }
 
+/* —— Intro hero + showroom — mobile (≤767px) —— */
+@media (max-width: 767px) {
+  body.theme-mono .order-hero__stage,
+  body.theme-mono .order-hero__imgbox {
+    overflow: hidden !important;
+  }
+
+  body.theme-mono .order-hero__scaler {
+    inset: 0 !important;
+    transform: scale(1.04) !important;
+    transform-origin: 50% 38% !important;
+  }
+
+  body.theme-mono .order-hero__bg,
+  body.theme-mono .order-hero__imgbox video {
+    object-fit: cover !important;
+    object-position: 50% 38% !important;
+  }
+
+  body.theme-mono .order-hero__tagline,
+  body.theme-mono .order-hero__micro {
+    color: rgba(255, 255, 255, 0.82) !important;
+    letter-spacing: 0.2em !important;
+    font-size: clamp(0.44rem, 2.8vw, 0.52rem) !important;
+    line-height: 1.6 !important;
+    text-shadow:
+      0 1px 10px rgba(0, 0, 0, 0.9),
+      0 2px 22px rgba(0, 0, 0, 0.75) !important;
+  }
+
+  body.theme-mono .order-hero__cta {
+    min-width: min(18.5rem, 92vw) !important;
+    min-height: 52px !important;
+  }
+
+  body.theme-mono #order-showroom .showroom-split {
+    padding:
+      calc(env(safe-area-inset-top, 0px) + 3.35rem)
+      clamp(0.45rem, 2vw, 0.65rem)
+      max(0.45rem, env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  body.theme-mono #order-showroom .showroom-panel__bottom {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0.8rem 0.7rem 0.85rem !important;
+    align-items: center !important;
+    text-align: center !important;
+    z-index: 32 !important;
+  }
+
+  body.theme-mono #order-showroom .showroom-panel__title {
+    font-size: clamp(1.1rem, 5vw, 1.6rem) !important;
+    line-height: 1.08 !important;
+    letter-spacing: -0.02em !important;
+    text-transform: none !important;
+    max-width: 100% !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    hyphens: none !important;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.65) !important;
+  }
+
+  body.theme-mono
+    #order-showroom
+    .showroom-split__panels
+    > .showroom-panel:nth-child(2)
+    .showroom-panel__title {
+    font-size: clamp(1rem, 4.6vw, 1.45rem) !important;
+  }
+
+  body.theme-mono #order-showroom .showroom-panel__cta {
+    align-self: center !important;
+    margin-top: 0.5rem !important;
+    min-width: min(10.5rem, 70vw) !important;
+    max-width: calc(100% - 1rem) !important;
+    height: 44px !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   body.theme-mono .shop-lux-enter,
   body.theme-mono .shop-lux-enter__body {
