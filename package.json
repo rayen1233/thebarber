@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "serve:intro": "npx --yes serve@14 . -l 8787 --config serve.json",
+    "prepare:vercel": "node scripts/prepare-vercel.mjs",
     "vercel:dev": "npx --yes vercel@39 dev"
   },
   "dependencies": {

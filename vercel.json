@@ -1,13 +1,45 @@
 {
   "version": 2,
   "installCommand": "npm install",
-  "buildCommand": "",
+  "buildCommand": "node scripts/prepare-vercel.mjs",
   "outputDirectory": ".",
   "cleanUrls": false,
   "rewrites": [
-    { "source": "/", "destination": "/intro.html" }
+    { "source": "/", "destination": "/intro.html" },
+    { "source": "/vite.svg", "destination": "/public/vite.svg" }
   ],
   "headers": [
+    {
+      "source": "/(.*)\\.mjs",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/javascript; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/javascript; charset=utf-8"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
     {
       "source": "/(.*)\\.html",
       "headers": [
@@ -18,20 +50,20 @@
       ]
     },
     {
-      "source": "/(.*)\\.mjs",
+      "source": "/(.*)\\.css",
       "headers": [
         {
-          "key": "Cache-Control",
-          "value": "no-store, no-cache, must-revalidate, max-age=0"
+          "key": "Content-Type",
+          "value": "text/css; charset=utf-8"
         }
       ]
     },
     {
-      "source": "/api/(.*)",
+      "source": "/(.*)\\.svg",
       "headers": [
         {
-          "key": "Cache-Control",
-          "value": "no-store"
+          "key": "Content-Type",
+          "value": "image/svg+xml"
         }
       ]
     }
