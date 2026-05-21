@@ -146,21 +146,30 @@ function shouldApplyRemoteList(remote, local, forceEmpty) {
 
 /**
  * @param {{ products?: unknown[], users?: unknown[], orders?: unknown[] }} data
- * @param {{ forceEmpty?: boolean, serverWins?: boolean }} [opts]
+ * @param {{ forceEmpty?: boolean, serverWins?: boolean, usersOrdersOnly?: boolean }} [opts]
  */
 function applyStoreToLocal(data, opts = {}) {
   const local = readLocalStorePayload();
   const force = Boolean(opts.forceEmpty || opts.serverWins);
   const serverWins = Boolean(opts.serverWins);
+  const usersOrdersOnly = Boolean(opts.usersOrdersOnly);
 
-  if (serverWins || shouldApplyRemoteList(data.products, local.products, force)) {
+  if (
+    !usersOrdersOnly &&
+    (serverWins || shouldApplyRemoteList(data.products, local.products, force))
+  ) {
     persistProductsLocally(/** @type {import("./shop-core.js").Product[]} */ (data.products));
     void saveStoreSnapshotIdb({
       products: Array.isArray(data.products) ? data.products : [],
       users: data.users ?? local.users,
       orders: data.orders ?? local.orders,
     });
-  } else if (Array.isArray(data.products) && data.products.length === 0 && local.products.length > 0) {
+  } else if (
+    !usersOrdersOnly &&
+    Array.isArray(data.products) &&
+    data.products.length === 0 &&
+    local.products.length > 0
+  ) {
     console.warn("[thebarber] serveur vide — produits locaux conservés (mode hors-ligne)");
   }
 
@@ -208,14 +217,16 @@ export function readLocalStorePayload() {
 
 /**
  * Pull server store into localStorage (all visitors).
- * @param {{ serverWins?: boolean, allowIdbFallback?: boolean }} [opts]
+ * @param {{ serverWins?: boolean, allowIdbFallback?: boolean, usersOrdersOnly?: boolean }} [opts]
  *   serverWins — successful GET always replaces local catalogue (default true on Vercel).
  *   allowIdbFallback — use IDB only when the network request fails (not when server is empty).
+ *   usersOrdersOnly — admin: sync users/orders only, leave product catalogue untouched.
  */
 export async function hydrateRemoteStore(opts = {}) {
   if (!isRemoteMode() && !usesRemoteCatalog()) return { ok: true, source: "local" };
   const serverWins = opts.serverWins !== false;
   const allowIdbFallback = opts.allowIdbFallback !== false;
+  const usersOrdersOnly = Boolean(opts.usersOrdersOnly);
   if (hydratePromise) return hydratePromise;
 
   hydratePromise = (async () => {
@@ -226,7 +237,7 @@ export async function hydrateRemoteStore(opts = {}) {
       const meta = data._meta && typeof data._meta === "object" ? data._meta : {};
       const remoteCount = Array.isArray(data.products) ? data.products.length : 0;
 
-      applyStoreToLocal(data, { serverWins, forceEmpty: serverWins });
+      applyStoreToLocal(data, { serverWins, forceEmpty: serverWins, usersOrdersOnly });
       return {
         ok: true,
         source: "remote",
@@ -238,7 +249,7 @@ export async function hydrateRemoteStore(opts = {}) {
       if (allowIdbFallback) {
         const cached = await loadStoreSnapshotIdb();
         if (cached?.products?.length) {
-          applyStoreToLocal(cached, { serverWins: false });
+          applyStoreToLocal(cached, { serverWins: false, usersOrdersOnly });
           return { ok: true, source: "idb-fallback", productCount: cached.products.length };
         }
       }

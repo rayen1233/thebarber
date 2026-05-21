@@ -19,8 +19,8 @@ import {
 } from "./shop-media-store.js";
 import { saveUsers, saveOrders } from "./shop-account-store.js";
 import { initAdminDashboard, refreshAdminDashboard } from "./admin-dashboard.js";
-import { hydrateRemoteStore, isRemoteMode } from "./shop-remote.js?v=20260521-video8";
 import {
+  hydrateRemoteStore,
   parseCatalogImportJson,
   migrateIdbVideosToRemote,
   restoreCatalogMediaFromSource,
@@ -1175,7 +1175,11 @@ function bindAdminStoreRefresh() {
 async function hydrateAdminUsersOrders() {
   if (!isRemoteMode()) return;
   try {
-    await hydrateRemoteStore({ serverWins: false, allowIdbFallback: false });
+    await hydrateRemoteStore({
+      serverWins: false,
+      allowIdbFallback: false,
+      usersOrdersOnly: true,
+    });
     refreshAdminDashboard();
   } catch (err) {
     console.warn("[thebarber] admin users/orders hydrate failed", err);
