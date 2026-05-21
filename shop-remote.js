@@ -633,3 +633,33 @@ export async function pushProductToRemote(product, opts = {}) {
   saveProducts(next, { skipRemoteSync: true });
   return { ok: true, product: prepared };
 }
+
+/**
+ * Remove one product from the server store (merge cannot delete by omission).
+ * @param {string} id
+ * @param {{ onProgress?: (msg: string) => void }} [opts]
+ */
+export async function deleteProductFromRemote(id, opts = {}) {
+  if (!isRemoteMode()) return { ok: true };
+  const productId = String(id || "").trim();
+  if (!productId) return { ok: false, error: "Identifiant produit invalide." };
+
+  const key = getAdminKey();
+  if (!key) {
+    return { ok: false, error: "Clé admin requise pour supprimer sur le serveur." };
+  }
+
+  opts.onProgress?.("Suppression sur le serveur…");
+  const body = await encodeStorePutBody({
+    merge: true,
+    deletedProductIds: [productId],
+    products: [],
+    users: [],
+    orders: [],
+  });
+  await putStoreBody(key, body);
+
+  const payload = readLocalStorePayload();
+  await saveStoreSnapshotIdb(payload);
+  return { ok: true };
+}

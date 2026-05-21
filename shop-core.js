@@ -249,7 +249,7 @@ export function upsertProduct(product, opts = {}) {
 /** @param {string} id */
 export function deleteProduct(id) {
   const list = getProducts().filter((p) => p.id !== id);
-  saveProducts(list);
+  saveProducts(list, { skipRemoteSync: true });
   removeCartLinesForProduct(id);
   import("./shop-media-store.js")
     .then((m) => m.deleteProductVideo(id))

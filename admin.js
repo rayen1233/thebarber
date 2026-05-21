@@ -29,6 +29,7 @@ import {
   migrateIdbVideosToRemote,
   fetchRemoteStoreMeta,
   pushProductToRemote,
+  deleteProductFromRemote,
 } from "./shop-remote.js";
 import { setProductsMemoryCache } from "./shop-core.js";
 
@@ -459,11 +460,38 @@ function renderTable() {
   });
 
   tb.querySelectorAll(".admin-del").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
       if (!id || !confirm("Supprimer ce produit ?")) return;
       deleteProduct(id);
       renderTable();
+      if (!isRemoteMode()) {
+        setAdminStatus("Produit supprimé.");
+        return;
+      }
+      await ensureAdminRemoteKey();
+      if (!getAdminKey()) {
+        setAdminStatus(
+          "Produit retiré de ce navigateur. Clé admin requise pour le supprimer sur le serveur.",
+          "error",
+        );
+        return;
+      }
+      setAdminStatus("Suppression sur le serveur…");
+      try {
+        await deleteProductFromRemote(id, {
+          onProgress: (msg) => setAdminStatus(msg),
+        });
+        setAdminStatus("Produit supprimé.");
+        void initRemoteSyncBanner();
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : "Suppression sur le serveur impossible.";
+        setAdminStatus(msg, "error");
+        alert(
+          `${msg}\n\nLe produit a été retiré ici mais peut réapparaître après rechargement tant que le serveur n’est pas à jour.`,
+        );
+      }
     });
   });
 }
@@ -825,12 +853,31 @@ function main() {
     }
   });
 
-  document.getElementById("admin-clear-all")?.addEventListener("click", () => {
+  document.getElementById("admin-clear-all")?.addEventListener("click", async () => {
     if (!confirm("Effacer tous les produits ET le panier ?")) return;
-    localStorage.removeItem(STORAGE_PRODUCTS);
+    saveProducts([], { skipRemoteSync: true });
     localStorage.removeItem(STORAGE_CART);
+    setProductsMemoryCache(null);
     renderTable();
-    setAdminStatus("Catalogue effacé.");
+    if (!isRemoteMode()) {
+      setAdminStatus("Catalogue effacé.");
+      return;
+    }
+    await ensureAdminRemoteKey();
+    if (!getAdminKey()) {
+      setAdminStatus("Catalogue effacé localement. Clé admin requise pour vider le serveur.", "error");
+      return;
+    }
+    setAdminStatus("Effacement du catalogue sur le serveur…");
+    try {
+      await pushRemoteStore({ products: [], users: [], orders: [] });
+      setAdminStatus("Catalogue effacé.");
+      void initRemoteSyncBanner();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Effacement serveur impossible.";
+      setAdminStatus(msg, "error");
+      alert(msg);
+    }
   });
 
   function refreshMigrateVideosButton() {
