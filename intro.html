@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- the-barber intro: showroom (photo backplates, no 3D) -->
-<html lang="en" data-intro-build="20260521-hero-ambient-v2">
+<html lang="en" data-intro-build="20260521-mobile-fix">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="./logo.png" />
@@ -4195,6 +4195,7 @@
         }
 
         .order-hero__micro {
+          opacity: 1 !important;
           margin-top: clamp(0.85rem, 2.8vh, 1.35rem);
           max-width: 32ch;
           padding: 0 0.35rem;
@@ -4284,8 +4285,8 @@
         }
       }
 
-      /* —— Showroom mobile (1-column stack, contained labels) —— */
-      @media (max-width: 767px) {
+      /* —— Showroom mobile / tablet (1-column stack, contained labels) —— */
+      @media (max-width: 991px) {
         #order-showroom {
           --split-vx: 50%;
           --split-hy: 50%;
@@ -5577,8 +5578,8 @@
     </style>
     <!-- Typography + gold luxury layer (after shop + inline) -->
     <link rel="stylesheet" href="./barber-typography.css?v=20260515-73" />
-    <link rel="stylesheet" href="./barber-theme-gold.css?v=20260521-6" />
-    <link rel="stylesheet" href="./barber-theme-mono-override.css?v=20260521-mobile" />
+    <link rel="stylesheet" href="./barber-theme-gold.css?v=20260521-mobile2" />
+    <link rel="stylesheet" href="./barber-theme-mono-override.css?v=20260521-mobile2" />
   </head>
   <body>
     <div id="page-scroll-root" class="page-scroll-root">

@@ -298,9 +298,20 @@ function resumeShowroomPanelVideos() {
   });
 }
 
+function isShowroomStackLayout() {
+  return window.matchMedia("(max-width: 991px)").matches;
+}
+
+function syncShowroomLayoutClass() {
+  const root = document.getElementById("order-showroom");
+  if (!root) return;
+  root.classList.toggle("showroom-layout--stack", isShowroomStackLayout());
+}
+
 function applySplitLines(idx) {
   const root = document.getElementById("order-showroom");
   if (!root) return;
+  if (isShowroomStackLayout()) return;
   const s =
     idx === null || idx === undefined || Number.isNaN(idx)
       ? SPLIT_IDLE
@@ -773,6 +784,17 @@ bindSplitLineHover();
 bindShowroomParallax();
 bindMerchTeaser();
 bindMerchTeaserParallax();
+
+syncShowroomLayoutClass();
+window.addEventListener("resize", syncShowroomLayoutClass);
+if (typeof window.matchMedia === "function") {
+  const stackMq = window.matchMedia("(max-width: 991px)");
+  if (typeof stackMq.addEventListener === "function") {
+    stackMq.addEventListener("change", syncShowroomLayoutClass);
+  } else if (typeof stackMq.addListener === "function") {
+    stackMq.addListener(syncShowroomLayoutClass);
+  }
+}
 
 function syncShowroomFromHash() {
   const h = location.hash.replace(/^#/, "");
