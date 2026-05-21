@@ -6,6 +6,24 @@
 export const STORAGE_PRODUCTS = "thebarber_products_v1";
 export const STORAGE_CART = "thebarber_cart_v1";
 
+/** Même clé que shop-remote.js — base API pour /api/media depuis localhost. */
+const REMOTE_API_BASE_SESSION = "thebarber_remote_api_base_v1";
+const DEFAULT_REMOTE_API_BASE = "https://thebarber-three.vercel.app";
+
+function remoteApiBaseForMedia() {
+  if (typeof window === "undefined") return "";
+  const host = window.location.hostname;
+  if (host !== "localhost" && host !== "127.0.0.1") return "";
+  try {
+    return (sessionStorage.getItem(REMOTE_API_BASE_SESSION) || DEFAULT_REMOTE_API_BASE).replace(
+      /\/$/,
+      "",
+    );
+  } catch {
+    return DEFAULT_REMOTE_API_BASE;
+  }
+}
+
 /** Fallback when catalogue JSON exceeds localStorage quota (large base64 photos). */
 /** @type {Product[] | null} */
 let productsMemoryCache = null;
@@ -81,7 +99,9 @@ export function resolveShopMediaUrl(raw) {
   if (v.startsWith("/api/media?")) {
     if (typeof window !== "undefined" && window.location) {
       try {
-        return new URL(v, window.location.href).href;
+        const remote = remoteApiBaseForMedia();
+        const base = remote || window.location.href;
+        return new URL(v, `${base.replace(/\/$/, "")}/`).href;
       } catch {
         return v;
       }

@@ -23,7 +23,7 @@ import {
   parseCatalogImportJson,
   migrateIdbVideosToRemote,
   restoreCatalogMediaFromSource,
-} from "./shop-remote.js?v=20260521-video7";
+} from "./shop-remote.js?v=20260521-video8";
 import {
   getAdminCatalogProducts,
   refreshAdminCatalog,
@@ -622,7 +622,7 @@ function main() {
     setAdminStatus("Lecture de la vidéo…");
     try {
       if ((isRemoteMode() || getAdminKey()) && usesAdminDatabase()) {
-        const { uploadMediaBlob } = await import("./shop-remote.js?v=20260521-video7");
+        const { uploadMediaBlob } = await import("./shop-remote.js?v=20260521-video8");
         setAdminStatus("Envoi de la vidéo vers Vercel (max 6 Mo)…");
         const { normalizeVideoUrlForCatalog } = await import("./lib/blob-media-url.mjs");
         const url = await uploadMediaBlob(f, f.name || "video.mp4", {
@@ -635,12 +635,29 @@ function main() {
         urlInp.value = normalizeVideoUrlForCatalog(url);
         await refreshAdminVideoPreview(urlInp.value);
         setAdminStatus(
-          `Vidéo prête — enregistrez le produit pour la sauver (${urlInp.value.slice(0, 48)}…).`,
+          "Vidéo envoyée sur Vercel — cliquez « Enregistrer le produit » pour qu’elle apparaisse sur la boutique en ligne.",
+          "error",
         );
+        const idInp = document.getElementById("admin-product-id");
+        const isEdit =
+          idInp instanceof HTMLInputElement && Boolean(idInp.value.trim());
+        const formEl = document.getElementById("admin-form");
+        if (
+          isEdit &&
+          getAdminKey() &&
+          usesAdminDatabase() &&
+          formEl instanceof HTMLFormElement
+        ) {
+          setAdminStatus("Vidéo en ligne — enregistrement du produit sur la base…");
+          formEl.requestSubmit();
+        }
       } else {
         urlInp.value = await readFileAsDataUrl(f);
         await refreshAdminVideoPreview(urlInp.value);
-        setAdminStatus("Vidéo intégrée (données locales). Cliquez Enregistrer le produit.");
+        setAdminStatus(
+          "Vidéo stockée sur cet ordinateur seulement (pas visible sur thebarber-three.vercel.app). Connectez la clé admin et ré-uploadez depuis l’admin en ligne.",
+          "error",
+        );
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Lecture vidéo impossible.");
