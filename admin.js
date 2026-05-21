@@ -914,6 +914,26 @@ function main() {
     }
   });
 
+  document.getElementById("admin-reload-server")?.addEventListener("click", async () => {
+    await ensureAdminRemoteKey();
+    setAdminStatus("Rechargement depuis le serveur…");
+    try {
+      const h = await hydrateAdminFromServer();
+      renderTable();
+      void initRemoteSyncBanner();
+      setAdminStatus(
+        h.ok
+          ? `${getProducts().length} produit(s) affichés (serveur : ${h.productCount ?? "?"}).`
+          : "Échec du rechargement.",
+        !h.ok,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Rechargement impossible.";
+      setAdminStatus(msg, "error");
+      alert(msg);
+    }
+  });
+
   document.getElementById("admin-push-server")?.addEventListener("click", async () => {
     await ensureAdminRemoteKey();
     if (!getAdminKey()) {
@@ -921,6 +941,9 @@ function main() {
       return;
     }
     try {
+      setAdminStatus("Synchronisation depuis le serveur…");
+      await hydrateAdminFromServer();
+      renderTable();
       await pushRemoteStore(undefined, {
         onProgress: (msg) => setAdminStatus(msg),
       });
@@ -1112,9 +1135,20 @@ async function ensureAdminRemoteKey() {
   if (key) setAdminKey(key.trim());
 }
 
+function bindAdminStoreRefresh() {
+  const refresh = () => {
+    renderTable();
+    refreshMigrateVideosButton();
+    void initRemoteSyncBanner();
+  };
+  window.addEventListener("thebarber:store-hydrated", refresh);
+  window.addEventListener("thebarber:products-updated", refresh);
+}
+
 async function bootAdmin() {
   await whenStoreReady();
   initLocalhostDbPanel();
+  bindAdminStoreRefresh();
   if (isRemoteMode()) {
     await ensureAdminRemoteKey();
     const hydrated = await hydrateAdminFromServer();
@@ -1123,6 +1157,15 @@ async function bootAdmin() {
         "Catalogue serveur inaccessible — vérifiez la connexion et /api/health.",
         "error",
       );
+    } else {
+      const n = getProducts().length;
+      const remoteN = hydrated.productCount ?? n;
+      if (n === 0 && remoteN > 0) {
+        setAdminStatus(
+          `Le serveur a ${remoteN} produit(s) mais l’affichage est vide — rechargez la page (Ctrl+F5).`,
+          "error",
+        );
+      }
     }
   } else if (getAdminKey()) {
     const hydrated = await hydrateAdminFromServer();
@@ -1135,6 +1178,7 @@ async function bootAdmin() {
   const videoHint = document.getElementById("admin-video-hint");
   if (videoHint && isRemoteMode()) videoHint.style.display = "block";
   main();
+  renderTable();
   void initRemoteSyncBanner();
   initAdminDashboard();
 }

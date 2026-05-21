@@ -157,7 +157,12 @@
                 au chargement ; les suppressions et enregistrements mettent à jour la base avant confirmation.
               </p>
               <div class="admin-row-actions">
-                <button type="button" class="shop-btn-primary" id="admin-push-server">Publier sur le serveur</button>
+                <button type="button" class="shop-btn-ghost" id="admin-reload-server">
+                  Recharger depuis le serveur
+                </button>
+                <button type="button" class="shop-btn-primary" id="admin-push-server">
+                  Republier le catalogue affiché
+                </button>
               </div>
               <p id="admin-remote-status" class="lede" style="margin: 1rem 0 0; font-size: 0.85rem" aria-live="polite"></p>
             </div>
@@ -246,6 +251,6 @@
     </div>
     <script type="module" src="./barber-theme.js"></script>
     <script type="module" src="./shop-bootstrap.js?v=20260521-db"></script>
-    <script type="module" src="./admin.js?v=20260522-media"></script>
+    <script type="module" src="./admin.js?v=20260522-sync"></script>
   </body>
 </html>

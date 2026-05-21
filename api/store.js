@@ -115,8 +115,13 @@ export default async function handler(req, res) {
     try {
       const payload = prepareStoreForWrite(parsed.data);
       if (!parsed.merge && !payload.products.length) {
+        const incoming = Array.isArray(parsed.data.products) ? parsed.data.products.length : 0;
         return res.status(400).json({
-          error: "Catalogue vide — aucun produit valide après normalisation (photos data: retirées ?).",
+          error:
+            incoming > 0
+              ? "Aucun produit enregistrable : retirez les photos intégrées (data:) du formulaire, utilisez des fichiers ou des URL, puis réessayez."
+              : "Catalogue vide — rechargez l’admin depuis le serveur (les 12 produits ne doivent pas être écrasés par un envoi vide).",
+          rejectedIncoming: incoming,
         });
       }
       const saved = parsed.merge

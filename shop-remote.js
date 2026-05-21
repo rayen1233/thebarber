@@ -6,6 +6,7 @@ import {
   setProductsMemoryCache,
   getProductsMemoryCache,
   saveProducts,
+  normalizeProductsForStorage,
 } from "./shop-core.js";
 import { dataUrlToBlob } from "./shop-media-store.js";
 import {
@@ -104,9 +105,10 @@ export function parseCatalogImportJson(data) {
 
 function persistProductsLocally(products) {
   if (!Array.isArray(products)) return;
-  const json = JSON.stringify(products);
+  const list = normalizeProductsForStorage(products);
+  const json = JSON.stringify(list);
   if (json.length > LARGE_CATALOG_BYTES) {
-    setProductsMemoryCache(/** @type {import("./shop-core.js").Product[]} */ (products));
+    setProductsMemoryCache(/** @type {import("./shop-core.js").Product[]} */ (list));
     try {
       localStorage.removeItem(STORAGE_PRODUCTS);
     } catch {
@@ -118,7 +120,7 @@ function persistProductsLocally(products) {
     localStorage.setItem(STORAGE_PRODUCTS, json);
     setProductsMemoryCache(null);
   } catch {
-    setProductsMemoryCache(/** @type {import("./shop-core.js").Product[]} */ (products));
+    setProductsMemoryCache(/** @type {import("./shop-core.js").Product[]} */ (list));
   }
 }
 
@@ -345,7 +347,28 @@ export async function pushRemoteStore(override, opts = {}) {
     return { ok: false, error: "Clé admin requise pour enregistrer sur le serveur." };
   }
   let payload = override || readLocalStorePayload();
+  if (!override?.products?.length && !payload.products?.length) {
+    opts.onProgress?.("Catalogue local vide — lecture du serveur…");
+    const res = await fetch(storeApiUrl("/api/store"), { cache: "no-store" });
+    if (res.ok) {
+      const remote = await res.json();
+      if (Array.isArray(remote.products) && remote.products.length) {
+        payload = {
+          products: remote.products,
+          users: remote.users || [],
+          orders: remote.orders || [],
+        };
+        persistProductsLocally(payload.products);
+      }
+    }
+  }
   const products = Array.isArray(payload.products) ? payload.products : [];
+
+  if (!products.length) {
+    throw new Error(
+      "Aucun produit à publier. Cliquez d’abord sur « Charger depuis la base » ou importez le JSON, puis réessayez.",
+    );
+  }
 
   const hasInline = products.some((p) => {
     const photos = p && typeof p === "object" && Array.isArray(p.photos) ? p.photos : [];

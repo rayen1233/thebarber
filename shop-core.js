@@ -104,27 +104,55 @@ export function normalizePhotosForDisplay(photos, min = 3) {
   return out.map((u) => resolveShopMediaUrl(u));
 }
 
+/** @param {unknown} p @returns {Product | null} */
+export function normalizeProductRecord(p) {
+  if (!p || typeof p !== "object") return null;
+  const row = /** @type {Record<string, unknown>} */ (p);
+  const name = String(row.name || "").trim();
+  const category = normalizeCategoryForImport(row.category);
+  const description = String(row.description || "").trim();
+  const priceTnd = Number(row.priceTnd);
+  if (!name || !description || !isValidShopCategoryLabel(category)) return null;
+  if (!Number.isFinite(priceTnd) || priceTnd < 0) return null;
+
+  let photos = (Array.isArray(row.photos) ? row.photos : [])
+    .map((x) => String(x || "").trim())
+    .filter((u) => u && !u.startsWith("data:") && !u.startsWith("idb://"));
+  if (!photos.length) photos = ["public/vite.svg"];
+
+  return {
+    id: row.id && String(row.id).trim() ? String(row.id) : newProductId(),
+    name,
+    category,
+    description,
+    priceTnd,
+    videoUrl: String(row.videoUrl || "").trim(),
+    photos,
+    createdAt:
+      row.createdAt && String(row.createdAt).trim()
+        ? String(row.createdAt)
+        : new Date().toISOString(),
+  };
+}
+
+/** @param {unknown[]} products @returns {Product[]} */
+export function normalizeProductsForStorage(products) {
+  if (!Array.isArray(products)) return [];
+  const out = [];
+  for (const p of products) {
+    const n = normalizeProductRecord(p);
+    if (n) out.push(n);
+  }
+  return out;
+}
+
 /** Catalog entries readable on the client (at least one photo URL). */
 function isProductShapeLoose(p) {
-  if (
-    !p ||
-    typeof p.id !== "string" ||
-    typeof p.name !== "string" ||
-    typeof p.category !== "string" ||
-    typeof p.description !== "string" ||
-    typeof p.priceTnd !== "number" ||
-    typeof p.videoUrl !== "string" ||
-    typeof p.createdAt !== "string"
-  ) {
-    return false;
-  }
-  const photos = Array.isArray(p.photos) ? p.photos : [];
-  const ok = photos.filter((x) => typeof x === "string" && x.trim().length > 0);
-  return ok.length >= 1;
+  return normalizeProductRecord(p) !== null;
 }
 
 function mapProductsForDisplay(list) {
-  return list.filter(isProductShapeLoose).map((p) => ({
+  return normalizeProductsForStorage(list).map((p) => ({
     ...p,
     videoUrl: resolveShopMediaUrl(String(p.videoUrl || "").trim()),
     photos: (Array.isArray(p.photos) ? p.photos : [])
