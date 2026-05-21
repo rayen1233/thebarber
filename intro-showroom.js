@@ -1,6 +1,8 @@
 /**
  * intro.html — ORDER showroom UI (photo backplates + grid morph via --split-vx / --split-hy).
+ * Vidéos showroom : préférence Blob + /api/media (comme les fiches produit), chargement paresseux.
  */
+import { resolveShopMediaUrl } from "./shop-core.js";
 
 const MODULE_DIR = new URL("./", import.meta.url);
 
@@ -28,7 +30,15 @@ const SPLIT_HOVER = {
 const SHOWROOM_BG_EXT = ["jpg", "jpeg", "png"];
 const SHOWROOM_VIDEO_EXT = ["mp4", "webm"];
 
-/** Panel index → video basename(s) at project root / public/ */
+/** Panel index → Blob pathname (servi par /api/media, Range MP4). */
+const SHOWROOM_BLOB_PATH_BY_INDEX = {
+  0: "thebarber/showroom/backgroundtondeuse.mp4",
+  1: "thebarber/showroom/backgroundscisso.mp4",
+  2: "thebarber/showroom/backgroundaccesoire.mp4",
+  3: "thebarber/showroom/backgroundmarchandise.mp4",
+};
+
+/** Panel index → video basename(s) at project root / public/ (repli local) */
 const SHOWROOM_VIDEO_BY_INDEX = {
   0: ["backgroundtondeuse"],
   1: ["backgroundscisso", "backgroundscissors", "backgroundscissos"],
@@ -40,6 +50,11 @@ const SHOWROOM_VIDEO_BY_INDEX = {
   ],
   3: ["backgroundmarchandise", "backgroundmerchandise", "backgroundmarchandises"],
 };
+
+/** @type {Map<number, string>} */
+const pendingShowroomVideoUrl = new Map();
+/** @type {Set<number>} */
+const loadedShowroomVideoIndex = new Set();
 const SHOWROOM_BG_FALLBACK = [
   "linear-gradient(180deg, rgba(201,162,39,0.09) 0%, transparent 52%), linear-gradient(155deg, #120e0a 0%, #2a2116 42%, #18120e 100%)",
   "linear-gradient(180deg, rgba(201,162,39,0.08) 0%, transparent 50%), linear-gradient(148deg, #0c0a07 0%, #252016 44%, #14100c 100%)",
@@ -76,6 +91,12 @@ function bgCandidatesForIndex(i) {
   return out;
 }
 
+function blobVideoUrlForIndex(i) {
+  const pathname = SHOWROOM_BLOB_PATH_BY_INDEX[i];
+  if (!pathname) return "";
+  return resolveShopMediaUrl(`/api/media?pathname=${encodeURIComponent(pathname)}`);
+}
+
 function videoCandidatesForIndex(i) {
   const bases = SHOWROOM_VIDEO_BY_INDEX[i];
   if (!bases?.length) return [];
@@ -86,6 +107,8 @@ function videoCandidatesForIndex(i) {
     seen.add(u);
     out.push(u);
   };
+  const blob = blobVideoUrlForIndex(i);
+  if (blob) push(blob);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const prefix = pathnameDir();
   for (const base of bases) {
@@ -134,6 +157,36 @@ function isShowroomOpen() {
 
 /** @type {IntersectionObserver | null} */
 let showroomVideoObserver = null;
+/** @type {IntersectionObserver | null} */
+let showroomPanelLazyObserver = null;
+
+function bindShowroomPanelLazyVideo() {
+  if (showroomPanelLazyObserver) return;
+  const root = document.getElementById("order-showroom");
+  showroomPanelLazyObserver = new IntersectionObserver(
+    (entries) => {
+      if (!isShowroomOpen()) return;
+      for (const entry of entries) {
+        if (!entry.isIntersecting || entry.intersectionRatio < 0.32) continue;
+        const panel = entry.target;
+        if (!(panel instanceof HTMLElement)) continue;
+        const raw = panel.getAttribute("data-split-index");
+        const idx = raw == null || raw === "" ? NaN : Number(raw);
+        if (!Number.isInteger(idx) || idx < 0 || idx > 3) continue;
+        if (!pendingShowroomVideoUrl.has(idx)) continue;
+        void loadShowroomVideoForPanel(idx);
+      }
+    },
+    {
+      root: root instanceof Element ? root : null,
+      threshold: [0, 0.2, 0.32, 0.5],
+      rootMargin: "0px",
+    },
+  );
+  document.querySelectorAll("#order-showroom [data-split-panel]").forEach((panel) => {
+    showroomPanelLazyObserver?.observe(panel);
+  });
+}
 
 function observeShowroomPanelVideo(video) {
   if (!(video instanceof HTMLVideoElement)) return;
@@ -154,9 +207,17 @@ function bindShowroomVideoVisibility() {
           continue;
         }
         if (entry.isIntersecting && entry.intersectionRatio >= 0.42) {
-          video.setAttribute("preload", "auto");
-          const p = video.play();
-          if (p && typeof p.catch === "function") p.catch(() => {});
+          const panel = video.closest("[data-split-panel]");
+          const raw = panel?.getAttribute("data-split-index");
+          const idx = raw == null || raw === "" ? NaN : Number(raw);
+          if (Number.isInteger(idx) && idx >= 0 && idx <= 3) {
+            void loadShowroomVideoForPanel(idx);
+          }
+          if (video.classList.contains("is-loaded")) {
+            video.setAttribute("preload", "auto");
+            const p = video.play();
+            if (p && typeof p.catch === "function") p.catch(() => {});
+          }
         } else {
           video.pause();
         }
@@ -188,6 +249,15 @@ async function resolveFirstAssetUrl(urls) {
       const abs = /^https?:\/\//i.test(u)
         ? u
         : new URL(u, document.baseURI || window.location.href).href;
+      if (abs.includes("/api/media?")) {
+        let res = await fetch(abs, {
+          method: "GET",
+          headers: { Range: "bytes=0-1" },
+          cache: "no-store",
+        });
+        if (res.ok || res.status === 206) return abs;
+        continue;
+      }
       let res = await fetch(abs, { method: "HEAD", cache: "no-store" });
       if (res.status === 405 || res.status === 501) {
         res = await fetch(abs, { method: "GET", cache: "no-store" });
@@ -198,6 +268,56 @@ async function resolveFirstAssetUrl(urls) {
     }
   }
   return null;
+}
+
+/** @param {number} i */
+async function resolveShowroomVideoUrl(i) {
+  const blob = blobVideoUrlForIndex(i);
+  if (blob) {
+    try {
+      const abs = new URL(blob, document.baseURI || window.location.href).href;
+      const res = await fetch(abs, {
+        method: "GET",
+        headers: { Range: "bytes=0-1" },
+        cache: "no-store",
+      });
+      if (res.ok || res.status === 206) return abs;
+    } catch {
+      /* fall through to static files */
+    }
+  }
+  const rest = videoCandidatesForIndex(i).filter((u) => u !== blob);
+  return resolveFirstAssetUrl(rest);
+}
+
+/** @param {number} i */
+async function loadShowroomVideoForPanel(i) {
+  if (loadedShowroomVideoIndex.has(i)) {
+    syncShowroomVideoPlayback();
+    return;
+  }
+  const url = pendingShowroomVideoUrl.get(i);
+  if (!url) return;
+
+  const imgs = document.querySelectorAll(".showroom-panel__img");
+  const img = imgs[i];
+  if (!(img instanceof HTMLImageElement)) return;
+  const media = img.closest(".showroom-panel__media");
+  if (!(media instanceof HTMLElement)) return;
+
+  const video = ensureShowroomPanelVideo(media);
+  if (!video) return;
+
+  const ok = await loadShowroomPanelVideo(video, url);
+  if (!ok) return;
+
+  loadedShowroomVideoIndex.add(i);
+  img.classList.remove("is-loaded");
+  img.removeAttribute("data-showroom-src");
+  img.removeAttribute("src");
+  img.setAttribute("hidden", "");
+  media.style.backgroundImage = "";
+  syncShowroomVideoPlayback();
 }
 
 function ensureShowroomPanelVideo(media) {
@@ -280,28 +400,13 @@ async function applyShowroomBackgrounds() {
   let anyHit = false;
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  pendingShowroomVideoUrl.clear();
+  loadedShowroomVideoIndex.clear();
+
   for (let i = 0; i < imgs.length; i++) {
     const img = imgs[i];
     if (!(img instanceof HTMLImageElement)) continue;
     const media = img.closest(".showroom-panel__media");
-    const videoCandidates = videoCandidatesForIndex(i);
-
-    if (videoCandidates.length && !reduceMotion) {
-      const videoHit = await resolveFirstAssetUrl(videoCandidates);
-      if (videoHit && media instanceof HTMLElement) {
-        const video = ensureShowroomPanelVideo(media);
-        const okVid = video ? await loadShowroomPanelVideo(video, videoHit) : false;
-        if (okVid) {
-          anyHit = true;
-          img.classList.remove("is-loaded");
-          img.removeAttribute("data-showroom-src");
-          img.removeAttribute("src");
-          img.setAttribute("hidden", "");
-          media.style.backgroundImage = "";
-          continue;
-        }
-      }
-    }
 
     if (media instanceof HTMLElement) {
       const stale = media.querySelector(".showroom-panel__video");
@@ -310,6 +415,15 @@ async function applyShowroomBackgrounds() {
         stale.removeAttribute("src");
         stale.classList.remove("is-loaded");
         stale.setAttribute("hidden", "");
+      }
+      delete media.dataset.showroomVideoUrl;
+    }
+
+    if (!reduceMotion && videoCandidatesForIndex(i).length) {
+      const videoHit = await resolveShowroomVideoUrl(i);
+      if (videoHit && media instanceof HTMLElement) {
+        pendingShowroomVideoUrl.set(i, videoHit);
+        media.dataset.showroomVideoUrl = videoHit;
       }
     }
 
@@ -336,6 +450,8 @@ async function applyShowroomBackgrounds() {
       "[showroom] no background image found — using gradients. Add public/background1.jpg … background4.jpg next to intro.html.",
     );
   }
+
+  bindShowroomPanelLazyVideo();
 }
 
 function pauseShowroomPanelVideos() {
@@ -534,6 +650,7 @@ function closeShowroom() {
 
   setShowroomRouteState("closing");
   pauseShowroomPanelVideos();
+  loadedShowroomVideoIndex.clear();
   applySplitLines(null);
   el.classList.add("is-closing");
 
@@ -835,6 +952,7 @@ bindShowroomParallax();
 bindMerchTeaser();
 bindMerchTeaserParallax();
 bindShowroomVideoVisibility();
+bindShowroomPanelLazyVideo();
 
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") pauseShowroomPanelVideos();

@@ -69,6 +69,18 @@ Les vidéos sont dans **IndexedDB** du navigateur (référence `idb://…`), pas
 
 Sinon, ré-uploadez chaque vidéo manuellement dans l’admin Vercel.
 
+### Vidéos showroom (fond des 4 panneaux COMMANDER)
+
+Les vidéos `backgroundtondeuse.mp4`, `backgroundscisso.mp4`, etc. doivent être sur **Blob** (comme les vidéos produit), pas seulement dans `public/`, pour une lecture fluide via `/api/media` (Range HTTP).
+
+```powershell
+cd "c:\Users\rayen\Downloads\the barber"
+# .env.local avec BLOB_READ_WRITE_TOKEN (vercel env pull)
+node scripts/upload-showroom-videos.mjs
+```
+
+Puis redéployez et hard-refresh `intro.html`. En local sans upload Blob, le site utilise encore les fichiers `public/*.mp4`.
+
 ### Bouton « Publier sur le serveur »
 
 Sur Vercel uniquement : envoie le contenu actuel de l’admin (ce navigateur) vers le Blob, sans refaire un import.
