@@ -1,21 +1,24 @@
 /**
- * Publie les vidéos showroom sur Vercel Blob (même flux que les vidéos produits → /api/media).
+ * Publie les 4 vidéos ORDER showroom sur Cloudinary (public_id fixes).
  *
- * Usage (depuis la racine du projet, avec .env.local ou variables Vercel) :
+ * Usage (racine du projet, .env.local avec CLOUDINARY_* ) :
  *   node scripts/upload-showroom-videos.mjs
  *
- * Fichiers lus dans public/ (ou racine) : backgroundtondeuse.mp4, backgroundscisso.mp4, …
+ * Fichiers : public/backgroundtondeuse.mp4, backgroundscisso.mp4, …
+ * Génère aussi public/showroom-cloudinary.json (URLs pour le site).
  */
 import fs from "node:fs";
 import path from "node:path";
-import { putMediaBlob } from "../lib/blob-put-media.mjs";
-import { catalogUrlFromBlobUpload } from "../lib/blob-media-url.mjs";
+import {
+  isCloudinaryConfigured,
+  uploadShowroomVideoToCloudinary,
+} from "../lib/cloudinary-media.mjs";
 
-const PAIRS = [
-  ["backgroundtondeuse.mp4", "thebarber/showroom/backgroundtondeuse.mp4"],
-  ["backgroundscisso.mp4", "thebarber/showroom/backgroundscisso.mp4"],
-  ["backgroundaccesoire.mp4", "thebarber/showroom/backgroundaccesoire.mp4"],
-  ["backgroundmarchandise.mp4", "thebarber/showroom/backgroundmarchandise.mp4"],
+const FILES_BY_INDEX = [
+  ["backgroundtondeuse.mp4", 0],
+  ["backgroundscisso.mp4", 1],
+  ["backgroundaccesoire.mp4", 2],
+  ["backgroundmarchandise.mp4", 3],
 ];
 
 function loadEnvLocal() {
@@ -40,11 +43,7 @@ function loadEnvLocal() {
 }
 
 function resolveLocalFile(name) {
-  const candidates = [
-    path.join(process.cwd(), "public", name),
-    path.join(process.cwd(), name),
-  ];
-  for (const p of candidates) {
+  for (const p of [path.join(process.cwd(), "public", name), path.join(process.cwd(), name)]) {
     if (fs.existsSync(p)) return p;
   }
   return null;
@@ -52,35 +51,45 @@ function resolveLocalFile(name) {
 
 async function main() {
   loadEnvLocal();
-  if (!process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+  if (!isCloudinaryConfigured()) {
     console.error(
-      "BLOB_READ_WRITE_TOKEN manquant. Copiez .env.local depuis Vercel ou lancez avec vercel env pull.",
+      "CLOUDINARY_CLOUD_NAME / API_KEY / API_SECRET manquants dans .env.local",
     );
     process.exit(1);
   }
 
-  console.log("Upload showroom → Blob (parallèle, private + /api/media)\n");
+  console.log("Upload showroom → Cloudinary (4 panneaux)\n");
+  const videos = [];
 
-  await Promise.all(
-    PAIRS.map(async ([localName, pathname]) => {
-      const filePath = resolveLocalFile(localName);
-      if (!filePath) {
-        console.warn(`  SKIP ${localName} (fichier introuvable)`);
-        return;
-      }
-      const buf = fs.readFileSync(filePath);
-      const mb = (buf.length / (1024 * 1024)).toFixed(2);
-      process.stdout.write(`  ${localName} (${mb} Mo) → ${pathname} … `);
-      const { result, access } = await putMediaBlob(pathname, buf, "video/mp4", {
-        multipart: buf.length > 4_500_000,
-      });
-      const url = catalogUrlFromBlobUpload(result, pathname, access);
-      console.log("OK");
-      console.log(`    ${url}\n`);
-    }),
+  for (const [localName, index] of FILES_BY_INDEX) {
+    const filePath = resolveLocalFile(localName);
+    if (!filePath) {
+      console.warn(`  SKIP ${localName}`);
+      continue;
+    }
+    const buf = fs.readFileSync(filePath);
+    const mb = (buf.length / (1024 * 1024)).toFixed(2);
+    process.stdout.write(`  [${index}] ${localName} (${mb} Mo) … `);
+    const row = await uploadShowroomVideoToCloudinary(buf, index);
+    videos.push({
+      index: row.index,
+      videoUrl: row.videoUrl,
+      posterUrl: row.posterUrl,
+      publicId: row.publicId,
+    });
+    console.log("OK");
+    console.log(`      ${row.videoUrl}\n`);
+  }
+
+  const outPath = path.join(process.cwd(), "public", "showroom-cloudinary.json");
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(
+    outPath,
+    JSON.stringify({ ok: true, updatedAt: new Date().toISOString(), videos }, null, 2),
+    "utf8",
   );
-
-  console.log("Terminé. Redéployez si besoin, puis hard-refresh intro.html.");
+  console.log(`Écrit ${outPath}`);
+  console.log("Redéployez Vercel, puis hard-refresh intro.html.");
 }
 
 main().catch((err) => {

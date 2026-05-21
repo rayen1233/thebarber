@@ -1,0 +1,5 @@
+{
+  "ok": false,
+  "note": "Run: node scripts/upload-showroom-videos.mjs — then commit this file with real Cloudinary URLs.",
+  "videos": []
+}

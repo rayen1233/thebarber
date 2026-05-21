@@ -54,6 +54,7 @@ export const CATEGORY_DEFS = [
  *   description: string,
  *   priceTnd: number,
  *   videoUrl: string,
+ *   videoPosterUrl?: string,
  *   photos: string[],
  *   createdAt: string
  * }} Product
@@ -172,6 +173,7 @@ export function normalizeProductRecord(p) {
     description,
     priceTnd,
     videoUrl: String(row.videoUrl || "").trim(),
+    videoPosterUrl: String(row.videoPosterUrl || "").trim(),
     photos,
     createdAt:
       row.createdAt && String(row.createdAt).trim()
@@ -200,6 +202,7 @@ function mapProductsForDisplay(list) {
   return normalizeProductsForStorage(list).map((p) => ({
     ...p,
     videoUrl: resolveShopMediaUrl(String(p.videoUrl || "").trim()),
+    videoPosterUrl: resolveShopMediaUrl(String(p.videoPosterUrl || "").trim()),
     photos: (Array.isArray(p.photos) ? p.photos : [])
       .map((x) => resolveShopMediaUrl(String(x || "").trim()))
       .filter(Boolean),
@@ -291,6 +294,7 @@ export function validateProductInput(partial) {
   const description = String(partial.description || "").trim();
   const priceTnd = Number(partial.priceTnd);
   const videoUrl = String(partial.videoUrl || "").trim();
+  const videoPosterUrl = String(partial.videoPosterUrl || "").trim();
   const photos = Array.isArray(partial.photos)
     ? partial.photos.map((s) => String(s || "").trim()).filter(Boolean)
     : [];
@@ -313,6 +317,7 @@ export function validateProductInput(partial) {
     description,
     priceTnd,
     videoUrl,
+    videoPosterUrl,
     photos,
     createdAt:
       partial.createdAt && String(partial.createdAt).trim()

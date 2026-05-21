@@ -1,16 +1,13 @@
 /**
- * Product videos in IndexedDB (localStorage quota is too small for multiple data: URLs).
+ * Product videos — URLs Cloudinary / HTTPS uniquement (pas de data: ni idb://).
  */
 
 import { getProducts, saveProducts, resolveShopMediaUrl } from "./shop-core.js";
 import { normalizeVideoUrlForCatalog } from "./lib/blob-media-url.mjs";
-
-const DB_NAME = "thebarber_media_v1";
-const DB_VERSION = 1;
-const STORE = "product_videos";
-
-/** @type {Map<string, string>} */
-const blobUrlCache = new Map();
+import {
+  posterUrlFromCloudinaryVideo,
+  resolveProductVideoPoster as resolvePosterClient,
+} from "./lib/cloudinary-client.js";
 
 export function isIdbVideoRef(url) {
   return String(url || "").trim().startsWith("idb://");
@@ -21,7 +18,8 @@ export function idbVideoProductId(url) {
 }
 
 export function productHasVideo(product) {
-  return Boolean(String(product?.videoUrl || "").trim());
+  const v = String(product?.videoUrl || "").trim();
+  return Boolean(v && !v.startsWith("data:") && !isIdbVideoRef(v));
 }
 
 /**
@@ -39,75 +37,29 @@ export function dataUrlToBlob(dataUrl) {
   return new Blob([bytes], { type: mime });
 }
 
-/**
- * @returns {Promise<IDBDatabase>}
- */
+const DB_NAME = "thebarber_media_v1";
+const DB_VERSION = 1;
+const STORE = "product_videos";
+
+/** @deprecated — plus d’écriture IDB pour les nouvelles vidéos. */
+export async function putProductVideo() {
+  throw new Error("Stockage vidéo local désactivé. Utilisez Cloudinary (admin en ligne).");
+}
+
+/** @returns {Promise<IDBDatabase>} */
 function openDb() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE);
-      }
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error || new Error("IndexedDB indisponible."));
   });
 }
 
-/**
- * @param {string} productId
- * @param {string | Blob} source
- */
-export async function putProductVideo(productId, source) {
-  const id = String(productId || "").trim();
-  if (!id) throw new Error("Identifiant produit requis.");
-  let blob;
-  if (typeof source === "string") {
-    if (source.startsWith("data:")) blob = dataUrlToBlob(source);
-    else throw new Error("Source vidéo invalide.");
-  } else if (source instanceof Blob) {
-    blob = source;
-  } else {
-    throw new Error("Source vidéo invalide.");
-  }
-  const db = await openDb();
-  await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.oncomplete = () => resolve(null);
-    tx.onerror = () => reject(tx.error);
-    tx.objectStore(STORE).put(blob, id);
-  });
-  db.close();
-  revokeProductVideoObjectUrl(id);
-}
-
-/**
- * @param {string} productId
- */
-export async function deleteProductVideo(productId) {
-  const id = String(productId || "").trim();
-  if (!id) return;
-  revokeProductVideoObjectUrl(id);
-  const db = await openDb();
-  await new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.oncomplete = () => resolve(null);
-    tx.onerror = () => reject(tx.error);
-    tx.objectStore(STORE).delete(id);
-  });
-  db.close();
-}
-
-/**
- * @param {string} productId
- * @returns {Promise<string | null>}
- */
-/**
- * @param {string} productId
- * @returns {Promise<Blob | null>}
- */
+/** Lecture seule — migration IDB → Cloudinary. */
 export async function getProductVideoBlob(productId) {
   const id = String(productId || "").trim();
   if (!id) return null;
@@ -122,63 +74,93 @@ export async function getProductVideoBlob(productId) {
   return blob instanceof Blob ? blob : null;
 }
 
-export async function getProductVideoObjectUrl(productId) {
+export async function deleteProductVideo(productId) {
   const id = String(productId || "").trim();
-  if (!id) return null;
-  if (blobUrlCache.has(id)) return blobUrlCache.get(id) || null;
-
-  const blob = await getProductVideoBlob(id);
-  if (!blob) return null;
-  const url = URL.createObjectURL(blob);
-  blobUrlCache.set(id, url);
-  return url;
-}
-
-export function revokeProductVideoObjectUrl(productId) {
-  const id = String(productId || "").trim();
-  const url = blobUrlCache.get(id);
-  if (url) {
-    URL.revokeObjectURL(url);
-    blobUrlCache.delete(id);
+  if (!id) return;
+  try {
+    const db = await openDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.oncomplete = () => resolve(null);
+      tx.onerror = () => reject(tx.error);
+      tx.objectStore(STORE).delete(id);
+    });
+    db.close();
+  } catch {
+    /* ignore */
   }
 }
 
-export function revokeAllProductVideoObjectUrls() {
-  for (const url of blobUrlCache.values()) URL.revokeObjectURL(url);
-  blobUrlCache.clear();
+/** @deprecated */
+export async function getProductVideoObjectUrl() {
+  return null;
+}
+
+export function revokeProductVideoObjectUrl() {}
+
+export function revokeAllProductVideoObjectUrls() {}
+
+/**
+ * @param {{ videoUrl?: string, videoPosterUrl?: string, photos?: string[] }} product
+ */
+export function resolveProductVideoPoster(product) {
+  const raw = resolvePosterClient(product);
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw) || raw.startsWith("/")) {
+    return resolveShopMediaUrl(raw);
+  }
+  return raw;
 }
 
 /**
- * Persist inline video to IndexedDB; return catalog-safe reference.
+ * Persist video reference — upload inline vers Cloudinary, jamais localStorage/IDB.
  * @param {string} productId
  * @param {string} videoUrl
- * @returns {Promise<string>}
+ * @returns {Promise<{ videoUrl: string, videoPosterUrl: string }>}
  */
 export async function persistProductVideoRef(productId, videoUrl) {
   const trimmed = String(videoUrl || "").trim();
-  if (!trimmed) {
-    await deleteProductVideo(productId);
-    return "";
-  }
-  if (isIdbVideoRef(trimmed)) return trimmed;
+  const empty = { videoUrl: "", videoPosterUrl: "" };
+  if (!trimmed) return empty;
+
   if (trimmed.startsWith("data:") && /video|octet-stream/i.test(trimmed.slice(0, 40))) {
-    try {
-      const { usesRemoteCatalog, uploadMediaBlob, getAdminKey } = await import(
-        "./shop-remote.js?v=20260522-uploadfast"
+    const { usesRemoteCatalog, uploadProductVideo, getAdminKey } = await import(
+      "./shop-remote.js?v=20260522-cloudinary"
+    );
+    if (!usesRemoteCatalog() || !getAdminKey()) {
+      throw new Error(
+        "Vidéo locale refusée. Connectez la clé admin sur le site en ligne et ré-importez le fichier (Cloudinary, max 20 Mo).",
       );
-      if (usesRemoteCatalog() && getAdminKey()) {
-        const url = await uploadMediaBlob(dataUrlToBlob(trimmed), `${productId}.mp4`, {
-          contentType: "video/mp4",
-        });
-        if (url) return normalizeVideoUrlForCatalog(url);
-      }
-    } catch (err) {
-      console.warn("[thebarber] video upload failed, fallback IDB", err);
     }
-    await putProductVideo(productId, trimmed);
-    return `idb://${productId}`;
+    const { videoUrl: url, videoPosterUrl } = await uploadProductVideo(
+      dataUrlToBlob(trimmed),
+      `${productId}.mp4`,
+      { contentType: "video/mp4", productId },
+    );
+    return {
+      videoUrl: normalizeVideoUrlForCatalog(url),
+      videoPosterUrl: normalizeVideoUrlForCatalog(videoPosterUrl) || posterUrlFromCloudinaryVideo(url),
+    };
   }
-  return normalizeVideoUrlForCatalog(trimmed);
+
+  if (isIdbVideoRef(trimmed)) {
+    throw new Error(
+      "Vidéo en stockage local (idb://) obsolète. Utilisez « Migrer vidéos IDB » ou ré-uploadez le fichier.",
+    );
+  }
+
+  const normalized = normalizeVideoUrlForCatalog(trimmed);
+  const poster =
+    String(
+      /** @type {{ videoPosterUrl?: string }} */ (
+        getProducts().find((p) => p.id === productId) || {}
+      ).videoPosterUrl || "",
+    ).trim() || posterUrlFromCloudinaryVideo(normalized);
+
+  return {
+    videoUrl: normalized,
+    videoPosterUrl: poster ? normalizeVideoUrlForCatalog(poster) : "",
+  };
 }
 
 /**
@@ -187,27 +169,38 @@ export async function persistProductVideoRef(productId, videoUrl) {
  */
 export async function resolveProductVideoUrl(product) {
   const raw = String(product?.videoUrl || "").trim();
-  if (!raw) return "";
-  if (isIdbVideoRef(raw)) {
-    const id = idbVideoProductId(raw);
-    return (await getProductVideoObjectUrl(id)) || "";
-  }
+  if (!raw || raw.startsWith("data:") || isIdbVideoRef(raw)) return "";
   return resolveShopMediaUrl(raw);
 }
 
-/** Move data:video URLs from localStorage into IndexedDB. */
+/** Pousse les data:video restants vers Cloudinary (plus d’IDB). */
 export async function migrateCatalogVideosToIdb() {
   const list = getProducts();
   let changed = false;
+  const { usesRemoteCatalog, uploadProductVideo, getAdminKey } = await import(
+    "./shop-remote.js?v=20260522-cloudinary"
+  ).catch(() => ({}));
+
   for (const p of list) {
     const v = String(p.videoUrl || "").trim();
-    if (!v.startsWith("data:") || !/video|octet-stream/i.test(v.slice(0, 48))) continue;
-    try {
-      await putProductVideo(p.id, v);
-      p.videoUrl = `idb://${p.id}`;
+    if (v.startsWith("data:") && /video|octet-stream/i.test(v.slice(0, 48))) {
+      if (!usesRemoteCatalog?.() || !getAdminKey?.()) continue;
+      try {
+        const { videoUrl, videoPosterUrl } = await uploadProductVideo(dataUrlToBlob(v), `${p.id}.mp4`, {
+          contentType: "video/mp4",
+          productId: p.id,
+        });
+        p.videoUrl = normalizeVideoUrlForCatalog(videoUrl);
+        p.videoPosterUrl = normalizeVideoUrlForCatalog(videoPosterUrl);
+        changed = true;
+      } catch (err) {
+        console.warn("[thebarber] migrate video failed", p.id, err);
+      }
+      continue;
+    }
+    if (isIdbVideoRef(v)) {
+      p.videoUrl = "";
       changed = true;
-    } catch {
-      /* keep inline ref if IDB fails */
     }
   }
   if (changed) saveProducts(list);

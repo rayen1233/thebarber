@@ -16,7 +16,7 @@ import {
   uploadMediaBlob,
   uploadInlinePhotosInProducts,
   leanProductsForRemotePush,
-} from "./shop-remote.js?v=20260521-adminfix";
+} from "./shop-remote.js?v=20260522-cloudinary";
 import { dataUrlToBlob } from "./shop-media-store.js";
 
 /** @type {import("./shop-core.js").Product[]} */
@@ -330,31 +330,41 @@ export async function adminSaveProduct(product, opts = {}) {
   }
   const vid = String(prepared.videoUrl || "").trim();
   const { normalizeVideoUrlForCatalog } = await import("./lib/blob-media-url.mjs");
+  const { uploadProductVideo } = await import("./shop-remote.js?v=20260522-cloudinary");
   if (vid.startsWith("data:")) {
-    opts.onProgress?.("Envoi vidéo…");
-    const uploaded = await uploadMediaBlob(
-      dataUrlToBlob(vid),
-      `${prepared.id}.mp4`,
-      { contentType: "video/mp4" },
-    );
-    prepared.videoUrl = normalizeVideoUrlForCatalog(uploaded);
+    opts.onProgress?.("Envoi vidéo vers Cloudinary…");
+    const up = await uploadProductVideo(dataUrlToBlob(vid), `${prepared.id}.mp4`, {
+      contentType: "video/mp4",
+      productId: prepared.id,
+    });
+    prepared.videoUrl = normalizeVideoUrlForCatalog(up.videoUrl);
+    prepared.videoPosterUrl = normalizeVideoUrlForCatalog(up.videoPosterUrl);
   } else {
     const { isIdbVideoRef, idbVideoProductId, getProductVideoBlob } = await import(
       "./shop-media-store.js",
     );
     if (isIdbVideoRef(vid)) {
-      opts.onProgress?.("Publication vidéo locale vers Blob…");
+      opts.onProgress?.("Publication vidéo locale vers Cloudinary…");
       const blob = await getProductVideoBlob(idbVideoProductId(vid));
       if (blob) {
-        const uploaded = await uploadMediaBlob(blob, `${prepared.id}.mp4`, {
+        const up = await uploadProductVideo(blob, `${prepared.id}.mp4`, {
           contentType: blob.type || "video/mp4",
+          productId: prepared.id,
         });
-        prepared.videoUrl = normalizeVideoUrlForCatalog(uploaded);
+        prepared.videoUrl = normalizeVideoUrlForCatalog(up.videoUrl);
+        prepared.videoPosterUrl = normalizeVideoUrlForCatalog(up.videoPosterUrl);
       } else {
         prepared.videoUrl = "";
+        prepared.videoPosterUrl = "";
       }
     } else {
       prepared.videoUrl = normalizeVideoUrlForCatalog(vid);
+      const poster = String(prepared.videoPosterUrl || "").trim();
+      prepared.videoPosterUrl = poster
+        ? normalizeVideoUrlForCatalog(poster)
+        : normalizeVideoUrlForCatalog(
+            (await import("./lib/cloudinary-client.js")).posterUrlFromCloudinaryVideo(vid),
+          );
     }
   }
 

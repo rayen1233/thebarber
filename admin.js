@@ -15,7 +15,7 @@ import {
   productHasVideo,
   isIdbVideoRef,
   idbVideoProductId,
-  getProductVideoObjectUrl,
+  getProductVideoBlob,
 } from "./shop-media-store.js";
 import { saveUsers, saveOrders } from "./shop-account-store.js";
 import { initAdminDashboard, refreshAdminDashboard } from "./admin-dashboard.js";
@@ -24,7 +24,7 @@ import {
   parseCatalogImportJson,
   migrateIdbVideosToRemote,
   restoreCatalogMediaFromSource,
-} from "./shop-remote.js?v=20260522-uploadfast";
+} from "./shop-remote.js?v=20260522-cloudinary";
 import {
   getAdminCatalogProducts,
   refreshAdminCatalog,
@@ -377,8 +377,9 @@ function collectPhotos(container) {
 
 function videoStatusLabel(p) {
   if (!productHasVideo(p)) return "—";
-  if (isIdbVideoRef(p.videoUrl)) return "Locale (IDB)";
-  if (String(p.videoUrl).startsWith("data:")) return "Locale (data)";
+  if (isIdbVideoRef(p.videoUrl)) return "IDB (à migrer)";
+  if (String(p.videoUrl).startsWith("data:")) return "data (refusé)";
+  if (/cloudinary\.com/i.test(String(p.videoUrl))) return "Cloudinary";
   return "Oui";
 }
 
@@ -401,7 +402,8 @@ async function refreshAdminVideoPreview(rawUrl) {
   let src = trimmed;
   if (isIdbVideoRef(trimmed)) {
     const id = idbVideoProductId(trimmed);
-    src = (await getProductVideoObjectUrl(id)) || "";
+    const blob = await getProductVideoBlob(id);
+    src = blob ? URL.createObjectURL(blob) : "";
     if (!src) {
       wrap.hidden = true;
       if (label) label.textContent = "Vidéo locale — choisissez un fichier pour publier en ligne.";
@@ -453,6 +455,10 @@ async function loadProductIntoForm(p) {
       );
     } else {
       ve.value = p.videoUrl || "";
+    }
+    const posterInp = document.getElementById("admin-video-poster-url");
+    if (posterInp instanceof HTMLInputElement) {
+      posterInp.value = String(p.videoPosterUrl || "").trim();
     }
     void refreshAdminVideoPreview(ve.value);
   }
@@ -615,7 +621,7 @@ function main() {
     if (!f || !(urlInp instanceof HTMLInputElement)) return;
     if (f.size > MAX_VIDEO_BYTES) {
       alert(
-        "Vidéo trop volumineuse (maximum 6 Mo). Compressez la vidéo, utilisez une URL externe, ou réduisez la durée.",
+        "Vidéo trop volumineuse (maximum 20 Mo). Compressez en 720p/1080p, utilisez une URL Cloudinary, ou réduisez la durée.",
       );
       videoFile.value = "";
       return;
@@ -623,20 +629,31 @@ function main() {
     setAdminStatus("Lecture de la vidéo…");
     try {
       if ((isRemoteMode() || getAdminKey()) && usesAdminDatabase()) {
-        const { uploadMediaBlob } = await import("./shop-remote.js?v=20260522-uploadfast");
-        setAdminStatus("Envoi direct vers Vercel Blob (max 6 Mo)…");
+        const { uploadProductVideo } = await import("./shop-remote.js?v=20260522-cloudinary");
+        const { inspectVideoFile } = await import("./lib/cloudinary-client.js");
         const { normalizeVideoUrlForCatalog } = await import("./lib/blob-media-url.mjs");
-        const url = await uploadMediaBlob(f, f.name || "video.mp4", {
+        const meta = await inspectVideoFile(f);
+        if (meta.width > 1920 || meta.height > 1080) {
+          setAdminStatus(
+            `Résolution ${meta.width}×${meta.height} — Cloudinary limitera à 1080p à l’envoi.`,
+          );
+        }
+        setAdminStatus("Envoi vers Cloudinary (max 20 Mo)…");
+        const { videoUrl, videoPosterUrl } = await uploadProductVideo(f, f.name || "video.mp4", {
           onProgress: (p) => {
             if (p?.percentage != null) {
-              setAdminStatus(`Vidéo : ${Math.round(p.percentage)} %…`);
+              setAdminStatus(`Vidéo Cloudinary : ${Math.round(p.percentage)} %…`);
             }
           },
         });
-        urlInp.value = normalizeVideoUrlForCatalog(url);
+        urlInp.value = normalizeVideoUrlForCatalog(videoUrl);
+        const posterInp = document.getElementById("admin-video-poster-url");
+        if (posterInp instanceof HTMLInputElement) {
+          posterInp.value = normalizeVideoUrlForCatalog(videoPosterUrl);
+        }
         await refreshAdminVideoPreview(urlInp.value);
         setAdminStatus(
-          "Vidéo envoyée sur Vercel — cliquez « Enregistrer le produit » pour qu’elle apparaisse sur la boutique en ligne.",
+          "Vidéo sur Cloudinary — cliquez « Enregistrer le produit » pour la publier sur la boutique.",
           "error",
         );
         const idInp = document.getElementById("admin-product-id");
@@ -653,12 +670,10 @@ function main() {
           formEl.requestSubmit();
         }
       } else {
-        urlInp.value = await readFileAsDataUrl(f);
-        await refreshAdminVideoPreview(urlInp.value);
-        setAdminStatus(
-          "Vidéo stockée sur cet ordinateur seulement (pas visible sur thebarber-three.vercel.app). Connectez la clé admin et ré-uploadez depuis l’admin en ligne.",
-          "error",
+        alert(
+          "Connexion admin requise. Ouvrez l’admin sur thebarber-three.vercel.app et saisissez la clé ADMIN_SECRET — les vidéos ne sont plus stockées en local.",
         );
+        videoFile.value = "";
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Lecture vidéo impossible.");
@@ -675,8 +690,11 @@ function main() {
     let photos = collectPhotos(phContainer || document.body);
     const productId = String(fd.get("id") || "").trim() || newProductId();
     let videoUrl = String(fd.get("videoUrl") || "").trim();
+    let videoPosterUrl = String(fd.get("videoPosterUrl") || "").trim();
     try {
-      videoUrl = await persistProductVideoRef(productId, videoUrl);
+      const persisted = await persistProductVideoRef(productId, videoUrl);
+      videoUrl = persisted.videoUrl;
+      videoPosterUrl = persisted.videoPosterUrl || videoPosterUrl;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Impossible d’enregistrer la vidéo.";
       setAdminStatus(msg, "error");
@@ -691,6 +709,7 @@ function main() {
       description: fd.get("description"),
       priceTnd: Number(fd.get("priceTnd")),
       videoUrl,
+      videoPosterUrl,
       photos,
     };
     let v = validateProductInput(partial);
@@ -758,7 +777,11 @@ function main() {
           try {
             const rawVideo = String(fd.get("videoUrl") || "").trim();
             const ref = await persistProductVideoRef(productId, rawVideo);
-            partial = { ...partial, videoUrl: ref };
+            partial = {
+              ...partial,
+              videoUrl: ref.videoUrl,
+              videoPosterUrl: ref.videoPosterUrl || partial.videoPosterUrl,
+            };
             const vVid = validateProductInput(partial);
             if (vVid.ok) {
               upsertProduct(vVid.product, { skipRemoteSync: isRemoteMode() });

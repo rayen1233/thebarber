@@ -1,8 +1,9 @@
 /**
  * intro.html — ORDER showroom UI (photo backplates + grid morph via --split-vx / --split-hy).
- * Vidéos showroom : préférence Blob + /api/media (comme les fiches produit), chargement paresseux.
+ * Vidéos showroom : Cloudinary (public/showroom-cloudinary.json ou /api/showroom-videos).
  */
 import { resolveShopMediaUrl } from "./shop-core.js";
+import { posterUrlFromCloudinaryVideo } from "./lib/cloudinary-client.js";
 
 const MODULE_DIR = new URL("./", import.meta.url);
 
@@ -53,8 +54,12 @@ const SHOWROOM_VIDEO_BY_INDEX = {
 
 /** @type {Map<number, string>} */
 const pendingShowroomVideoUrl = new Map();
+/** @type {Map<number, string>} */
+const pendingShowroomPosterUrl = new Map();
 /** @type {Set<number>} */
 const loadedShowroomVideoIndex = new Set();
+/** @type {Map<number, { videoUrl: string, posterUrl: string }> | null} */
+let showroomCloudinaryByIndex = null;
 const SHOWROOM_BG_FALLBACK = [
   "linear-gradient(180deg, rgba(201,162,39,0.09) 0%, transparent 52%), linear-gradient(155deg, #120e0a 0%, #2a2116 42%, #18120e 100%)",
   "linear-gradient(180deg, rgba(201,162,39,0.08) 0%, transparent 50%), linear-gradient(148deg, #0c0a07 0%, #252016 44%, #14100c 100%)",
@@ -275,16 +280,62 @@ async function resolveFirstAssetUrl(urls) {
   return null;
 }
 
+async function loadShowroomCloudinaryCatalog() {
+  if (showroomCloudinaryByIndex) return showroomCloudinaryByIndex;
+  const map = new Map();
+
+  const ingest = (videos) => {
+    if (!Array.isArray(videos)) return;
+    for (const row of videos) {
+      const idx = Number(row?.index);
+      const videoUrl = String(row?.videoUrl || "").trim();
+      if (!Number.isInteger(idx) || idx < 0 || idx > 3 || !videoUrl) continue;
+      const posterUrl =
+        String(row?.posterUrl || "").trim() || posterUrlFromCloudinaryVideo(videoUrl);
+      map.set(idx, { videoUrl, posterUrl });
+    }
+  };
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const prefix = pathnameDir();
+  try {
+    const jsonUrl = new URL("showroom-cloudinary.json", `${origin}${prefix}`).href;
+    const res = await fetch(jsonUrl, { cache: "default" });
+    if (res.ok) ingest((await res.json()).videos);
+  } catch {
+    /* API fallback */
+  }
+
+  if (!map.size) {
+    try {
+      const apiUrl = new URL("/api/showroom-videos", origin || window.location.href).href;
+      const res = await fetch(apiUrl, { cache: "default" });
+      if (res.ok) ingest((await res.json()).videos);
+    } catch {
+      /* static / blob fallback */
+    }
+  }
+
+  showroomCloudinaryByIndex = map;
+  return map;
+}
+
 /** @param {number} i */
 async function resolveShowroomVideoUrl(i) {
+  const cloud = await loadShowroomCloudinaryCatalog();
+  const row = cloud.get(i);
+  if (row?.videoUrl) {
+    if (row.posterUrl) pendingShowroomPosterUrl.set(i, row.posterUrl);
+    return row.videoUrl;
+  }
+
   const fast = staticShowroomVideoUrl(i);
-  if (fast && isProductionSite()) return fast;
   if (fast) {
     try {
       const res = await fetch(fast, { method: "HEAD", cache: "default" });
       if (res.ok) return fast;
     } catch {
-      /* blob / other candidates */
+      /* other candidates */
     }
   }
   const candidates = videoCandidatesForIndex(i);
@@ -338,6 +389,9 @@ async function ensureShowroomVideoUrls() {
       const media = img instanceof HTMLImageElement ? img.closest(".showroom-panel__media") : null;
       if (media instanceof HTMLElement) {
         media.dataset.showroomVideoUrl = hit;
+        const poster = pendingShowroomPosterUrl.get(i);
+        if (poster) media.dataset.showroomPosterUrl = poster;
+        else delete media.dataset.showroomPosterUrl;
         media.classList.add("showroom-panel__media--video");
       }
     }),
@@ -401,6 +455,16 @@ function loadShowroomPanelVideo(video, url) {
       return;
     }
     configureShowroomVideo(video, { preload: "auto" });
+    const panel = video.closest("[data-split-panel]");
+    const rawIdx = panel?.getAttribute("data-split-index");
+    const idx = rawIdx == null || rawIdx === "" ? NaN : Number(rawIdx);
+    const poster =
+      (Number.isInteger(idx) && pendingShowroomPosterUrl.get(idx)) ||
+      video.closest(".showroom-panel__media")?.dataset.showroomPosterUrl ||
+      posterUrlFromCloudinaryVideo(url);
+    if (poster) video.setAttribute("poster", poster);
+    else video.removeAttribute("poster");
+
     let settled = false;
     const onReady = () => {
       if (settled) return;
@@ -458,6 +522,7 @@ async function applyShowroomBackgrounds() {
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   pendingShowroomVideoUrl.clear();
+  pendingShowroomPosterUrl.clear();
   loadedShowroomVideoIndex.clear();
 
   for (let i = 0; i < imgs.length; i++) {
@@ -722,8 +787,9 @@ const MCH_TEASER_VIDEO_BASES = [
   "backgroundmarchandises",
 ];
 
-function fastMchTeaserVideoUrl() {
-  return staticShowroomVideoUrl(3);
+async function fastMchTeaserVideoUrl() {
+  const cloud = await loadShowroomCloudinaryCatalog();
+  return cloud.get(3)?.videoUrl || staticShowroomVideoUrl(3);
 }
 
 function mchTeaserVideoCandidates() {
@@ -734,8 +800,6 @@ function mchTeaserVideoCandidates() {
     seen.add(u);
     out.push(u);
   };
-  const fast = fastMchTeaserVideoUrl();
-  if (fast) push(fast);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const prefix = pathnameDir();
   for (const base of MCH_TEASER_VIDEO_BASES) {
@@ -832,16 +896,13 @@ async function tryMchTeaserMedia() {
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   if (!reduce && videoEl instanceof HTMLVideoElement) {
-    const fast = fastMchTeaserVideoUrl();
-    const hit =
-      fast && isProductionSite()
-        ? fast
-        : fast
-          ? (await fetch(fast, { method: "HEAD", cache: "default" }).then((r) =>
-              r.ok ? fast : null,
-            ).catch(() => null)) || (await resolveFirstAssetUrl(mchTeaserVideoCandidates()))
-          : await resolveFirstAssetUrl(mchTeaserVideoCandidates());
+    const cloud = await loadShowroomCloudinaryCatalog();
+    const row = cloud.get(3);
+    let hit = row?.videoUrl || (await fastMchTeaserVideoUrl()) || "";
+    if (!hit) hit = (await resolveFirstAssetUrl(mchTeaserVideoCandidates())) || "";
     if (hit) {
+      const poster = row?.posterUrl || posterUrlFromCloudinaryVideo(hit);
+      if (poster) videoEl.setAttribute("poster", poster);
       const ok = await loadMchTeaserVideo(videoEl, hit);
       if (ok) {
         photoEl?.classList.remove("has-src");
@@ -1015,6 +1076,7 @@ bindMerchTeaser();
 bindMerchTeaserParallax();
 async function prefetchShowroomVideoUrls() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  await loadShowroomCloudinaryCatalog();
   await ensureShowroomVideoUrls();
   const indices = [0, 1, 2, 3].filter((i) => pendingShowroomVideoUrl.has(i));
   await Promise.all(indices.map((i) => loadShowroomVideoForPanel(i)));

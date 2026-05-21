@@ -37,8 +37,8 @@ import { initTheme, mountThemeDevToggle } from "./barber-theme.js";
 import {
   productHasVideo,
   resolveProductVideoUrl,
+  resolveProductVideoPoster,
   migrateCatalogVideosToIdb,
-  revokeAllProductVideoObjectUrls,
 } from "./shop-media-store.js";
 
 const SHELL_ID = "shop-atelier";
@@ -321,7 +321,7 @@ function setShopView(which) {
 
 function mediaPreview(product) {
   if (productHasVideo(product)) {
-    return `<video class="shop-bc-card__video" data-product-id="${escapeHtml(product.id)}" muted loop playsinline disablepictureinpicture preload="auto"></video>`;
+    return `<video class="shop-bc-card__video" data-product-id="${escapeHtml(product.id)}" muted loop playsinline disablepictureinpicture preload="metadata"></video>`;
   }
   const src = product.photos[0] || "";
   return `<img src="${escapeHtml(src)}" alt="" loading="lazy" decoding="async" />`;
@@ -331,15 +331,20 @@ function mediaPreview(product) {
  * @param {import("./shop-core.js").Product[]} products
  */
 async function hydrateListCardMedia(products) {
-  revokeAllProductVideoObjectUrls();
   const cards = [...document.querySelectorAll("#shop-grid .shop-bc-card")];
   await Promise.all(
     products.map(async (p, i) => {
       const card = cards[i];
       const video = card?.querySelector(".shop-bc-card__media video.shop-bc-card__video");
       if (!(video instanceof HTMLVideoElement)) return;
+      configureListCardVideoEl(video);
+      const poster = resolveProductVideoPoster(p);
+      if (poster) video.setAttribute("poster", poster);
+      else video.removeAttribute("poster");
       const src = await resolveProductVideoUrl(p);
-      if (src) video.src = src;
+      if (src) video.dataset.src = src;
+      else delete video.dataset.src;
+      video.removeAttribute("src");
     }),
   );
 }
@@ -357,10 +362,35 @@ function teardownListCardVideoObserver() {
 }
 
 /**
+ * @param {HTMLVideoElement} v
+ */
+function configureListCardVideoEl(v) {
+  v.muted = true;
+  v.loop = true;
+  v.autoplay = false;
+  v.playsInline = true;
+  v.setAttribute("playsinline", "");
+  v.controls = false;
+  v.removeAttribute("controls");
+  v.setAttribute("controlsList", "nodownload nofullscreen noremoteplayback");
+  try {
+    v.disablePictureInPicture = true;
+  } catch {
+    /* ignore */
+  }
+  v.setAttribute("preload", "metadata");
+}
+
+/**
  * @param {HTMLVideoElement} video
  */
 function playListCardVideo(video) {
-  configurePdVideoEl(video);
+  configureListCardVideoEl(video);
+  const pending = video.dataset.src;
+  if (pending && video.src !== pending) {
+    video.src = pending;
+    video.load();
+  }
   const run = () => {
     if (!video.paused && !video.ended) return;
     const p = video.play();
@@ -410,7 +440,7 @@ function wireListVideos() {
   const videoCards = cards.filter((card) => {
     const video = card.querySelector(".shop-bc-card__media video.shop-bc-card__video");
     if (!(video instanceof HTMLVideoElement)) return false;
-    configurePdVideoEl(video);
+    configureListCardVideoEl(video);
     schedulePlay(card, video);
     return !reduce;
   });
@@ -811,7 +841,7 @@ function renderDetail(id) {
   if (stockEl) stockEl.textContent = "Disponible à l’atelier";
 
   const photos = (product.photos || []).filter(Boolean);
-  const poster0 = photos[0] || "";
+  const poster0 = resolveProductVideoPoster(product) || photos[0] || "";
   const hasVid = productHasVideo(product);
 
   if (hasVid) {

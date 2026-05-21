@@ -83,6 +83,7 @@
                   type="text"
                   placeholder="https://… ou public/video.mp4"
                 />
+                <input type="hidden" id="admin-video-poster-url" name="videoPosterUrl" value="" />
                 <input type="file" id="admin-video-file" accept="video/*" style="margin-top: 0.5rem" />
                 <div id="admin-video-preview-wrap" hidden style="margin-top: 0.65rem">
                   <video
@@ -104,8 +105,9 @@
                   id="admin-video-hint"
                   style="margin: 0 0 0.75rem; font-size: 0.78rem; color: #d8a090; line-height: 1.45; display: none"
                 >
-                  Vidéos : max <strong>6 Mo</strong>. Sur <strong>thebarber-three.vercel.app/admin</strong>, saisissez la clé admin,
-                  uploadez puis <strong>Enregistrer le produit</strong> — sinon la boutique en ligne n’affichera pas la vidéo.
+                  Vidéos : max <strong>20 Mo</strong>, hébergées sur <strong>Cloudinary</strong> (MP4 1080p + miniature).
+                  Sur <strong>thebarber-three.vercel.app/admin</strong>, saisissez la clé admin, uploadez puis
+                  <strong>Enregistrer le produit</strong>.
                 </p>
                 <div class="admin-row-actions" style="margin-bottom: 0.75rem">
                   <button type="button" class="shop-btn-ghost" id="admin-photos-bulk-btn">Importer plusieurs images</button>
