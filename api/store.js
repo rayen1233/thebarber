@@ -8,6 +8,10 @@ import {
   defaultStore,
   storeEnvStatus,
 } from "../lib/store-server.js";
+import {
+  extractStorePayload,
+  leanProductsForServer,
+} from "../lib/store-payload.mjs";
 
 /**
  * @param {unknown} body
@@ -21,9 +25,38 @@ function parsePutBody(body) {
   const merge = Boolean(row.merge);
   if (typeof row.storeGzipBase64 === "string" && row.storeGzipBase64.trim()) {
     const json = gunzipSync(Buffer.from(row.storeGzipBase64, "base64")).toString("utf8");
-    return { data: JSON.parse(json), merge };
+    const inner = JSON.parse(json);
+    const innerMerge =
+      inner && typeof inner === "object" && /** @type {{ merge?: boolean }} */ (inner).merge;
+    return {
+      data: extractStorePayload(inner),
+      merge: merge || Boolean(innerMerge),
+    };
   }
-  return { data: body, merge };
+  return { data: extractStorePayload(row), merge };
+}
+
+/** @param {ReturnType<typeof defaultStore>} data */
+function prepareStoreForWrite(data) {
+  const base = extractStorePayload(data);
+  return {
+    products: leanProductsForServer(base.products),
+    users: base.users,
+    orders: base.orders,
+  };
+}
+
+async function verifySavedCount(expected) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const loaded = await loadStore();
+    const n = loaded.products.length;
+    if (n >= expected) return n;
+    if (attempt < 3) {
+      await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
+    }
+  }
+  const loaded = await loadStore();
+  return loaded.products.length;
 }
 
 export const config = {
@@ -80,12 +113,28 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Catalogue illisible : ${msg}` });
     }
     try {
+      const payload = prepareStoreForWrite(parsed.data);
+      if (!parsed.merge && !payload.products.length) {
+        return res.status(400).json({
+          error: "Catalogue vide — aucun produit valide après normalisation (photos data: retirées ?).",
+        });
+      }
       const saved = parsed.merge
-        ? await mergeStore(parsed.data)
-        : await saveStore(parsed.data);
+        ? await mergeStore(payload)
+        : await saveStore(payload);
+      const verifiedCount = await verifySavedCount(saved.products.length);
+      if (saved.products.length > 0 && verifiedCount === 0) {
+        return res.status(500).json({
+          error:
+            "Écriture Blob échouée (lecture après sauvegarde = 0 produit). Vérifiez thebarber-blob sur Vercel.",
+          productCount: 0,
+          verifiedCount: 0,
+        });
+      }
       return res.status(200).json({
         ok: true,
         productCount: saved.products.length,
+        verifiedCount,
       });
     } catch (err) {
       console.error("[store] save failed", err);

@@ -465,25 +465,39 @@ export async function replaceRemoteCatalog(payload, opts = {}) {
   }
 
   const lean = leanProductsForRemotePush(products);
-  const result = await pushRemoteStore(
-    {
-      products: lean,
-      users: payload.users || [],
-      orders: payload.orders || [],
-    },
-    opts,
-  );
+  opts.onProgress?.("Publication du catalogue sur le serveur…");
+  const body = await encodeStorePutBody({
+    merge: false,
+    products: lean,
+    users: payload.users || [],
+    orders: payload.orders || [],
+  });
+  const out = await putStoreBody(key, body);
+  const savedCount = out.productCount ?? 0;
+  const verified =
+    typeof out.verifiedCount === "number" ? out.verifiedCount : savedCount;
 
-  const healthRes = await fetch(storeApiUrl("/api/health"), { cache: "no-store" });
-  const health = healthRes.ok ? await healthRes.json().catch(() => ({})) : {};
-  const serverCount =
-    typeof health.productCount === "number" ? health.productCount : result.productCount;
+  saveProducts(/** @type {import("./shop-core.js").Product[]} */ (lean));
+  await saveStoreSnapshotIdb({
+    products: lean,
+    users: payload.users || [],
+    orders: payload.orders || [],
+  });
+
+  let serverCount = Math.max(savedCount, verified);
+  for (let i = 0; i < 5 && serverCount === 0; i++) {
+    await new Promise((r) => setTimeout(r, 600));
+    const healthRes = await fetch(storeApiUrl("/api/health"), { cache: "no-store" });
+    const health = healthRes.ok ? await healthRes.json().catch(() => ({})) : {};
+    serverCount = typeof health.productCount === "number" ? health.productCount : 0;
+  }
+
   if (!serverCount) {
     throw new Error(
-      "Import refusé par le serveur (0 produit en base). Vérifiez la clé ADMIN_SECRET, réessayez avec des photos URL (pas seulement data:), ou utilisez scripts/push-catalog.mjs --skip-images.",
+      "Le serveur n’a pas enregistré le catalogue (0 produit). Vérifiez ADMIN_SECRET, redeploy Vercel, ou lancez : node scripts/push-catalog.mjs votre-fichier.json VOTRE_CLE --skip-images",
     );
   }
-  return { ...result, productCount: serverCount };
+  return { ok: true, productCount: serverCount };
 }
 
 /** @returns {Promise<{ productCount: number, blobConfigured?: boolean, adminConfigured?: boolean }>} */
