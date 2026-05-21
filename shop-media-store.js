@@ -5,6 +5,7 @@
 import { getProducts, saveProducts, resolveShopMediaUrl } from "./shop-core.js";
 import { normalizeVideoUrlForCatalog } from "./lib/blob-media-url.mjs";
 import {
+  optimizeCloudinaryVideoUrl,
   posterUrlFromCloudinaryVideo,
   resolveProductVideoPoster as resolvePosterClient,
 } from "./lib/cloudinary-client.js";
@@ -165,12 +166,19 @@ export async function persistProductVideoRef(productId, videoUrl) {
 
 /**
  * @param {{ id: string, videoUrl?: string }} product
+ * @param {{ profile?: "card" | "detail" }} [opts]
  * @returns {Promise<string>}
  */
-export async function resolveProductVideoUrl(product) {
+export async function resolveProductVideoUrl(product, opts = {}) {
   const raw = String(product?.videoUrl || "").trim();
   if (!raw || raw.startsWith("data:") || isIdbVideoRef(raw)) return "";
-  return resolveShopMediaUrl(raw);
+  const resolved = resolveShopMediaUrl(raw);
+  if (/res\.cloudinary\.com/i.test(resolved)) {
+    return optimizeCloudinaryVideoUrl(resolved, {
+      profile: opts.profile === "detail" ? "detail" : "card",
+    });
+  }
+  return resolved;
 }
 
 /** Pousse les data:video restants vers Cloudinary (plus d’IDB). */

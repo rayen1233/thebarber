@@ -386,6 +386,7 @@ function configureListCardVideoEl(v) {
  */
 function playListCardVideo(video) {
   configureListCardVideoEl(video);
+  video.setAttribute("preload", "auto");
   const pending = video.dataset.src;
   if (pending && video.src !== pending) {
     video.src = pending;
@@ -461,14 +462,14 @@ function wireListVideos() {
         const card = /** @type {HTMLElement} */ (ent.target);
         const video = card.querySelector(".shop-bc-card__media video.shop-bc-card__video");
         if (!(video instanceof HTMLVideoElement)) return;
-        if (ent.isIntersecting && ent.intersectionRatio >= 0.18) playListCardVideo(video);
-        else if (!ent.isIntersecting || ent.intersectionRatio < 0.06) pauseListCardVideo(video);
+        if (ent.isIntersecting) playListCardVideo(video);
+        else pauseListCardVideo(video);
       });
     },
     {
       root: scrollRoot instanceof Element ? scrollRoot : null,
-      rootMargin: "48px 0px",
-      threshold: [0, 0.06, 0.18, 0.4, 0.65],
+      rootMargin: "120px 0px",
+      threshold: [0, 0.12],
     },
   );
 
@@ -852,7 +853,7 @@ function renderDetail(id) {
       setPdHeroBackdropImage(heroBackdrop, poster0);
     }
     void (async () => {
-      const url = await resolveProductVideoUrl(product);
+      const url = await resolveProductVideoUrl(product, { profile: "detail" });
       if (url) {
         if (heroBackdrop) setPdHeroBackdropVideo(heroBackdrop, url, poster0);
         if (mainVisual) setPdMainVisualVideo(mainVisual, url, poster0, true);

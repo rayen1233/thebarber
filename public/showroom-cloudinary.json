@@ -1,5 +1,30 @@
 {
-  "ok": false,
-  "note": "Run: node scripts/upload-showroom-videos.mjs — then commit this file with real Cloudinary URLs.",
-  "videos": []
+  "ok": true,
+  "updatedAt": "2026-05-21T23:40:43.781Z",
+  "videos": [
+    {
+      "index": 0,
+      "videoUrl": "https://res.cloudinary.com/dswnmoq8d/video/upload/c_limit,h_1080,q_auto,vc_h264,w_1920/v1779406791/thebarber/showroom/backgroundtondeuse.mp4",
+      "posterUrl": "https://res.cloudinary.com/dswnmoq8d/video/upload/c_fill,dl_0,g_auto,h_360,w_640/v1779406791/thebarber/showroom/backgroundtondeuse.jpg",
+      "publicId": "thebarber/showroom/backgroundtondeuse"
+    },
+    {
+      "index": 1,
+      "videoUrl": "https://res.cloudinary.com/dswnmoq8d/video/upload/c_limit,h_1080,q_auto,vc_h264,w_1920/v1779406805/thebarber/showroom/backgroundscisso.mp4",
+      "posterUrl": "https://res.cloudinary.com/dswnmoq8d/video/upload/c_fill,dl_0,g_auto,h_360,w_640/v1779406805/thebarber/showroom/backgroundscisso.jpg",
+      "publicId": "thebarber/showroom/backgroundscisso"
+    },
+    {
+      "index": 2,
+      "videoUrl": "https://res.cloudinary.com/dswnmoq8d/video/upload/c_limit,h_1080,q_auto,vc_h264,w_1920/v1779406816/thebarber/showroom/backgroundaccesoire.mp4",
+      "posterUrl": "https://res.cloudinary.com/dswnmoq8d/video/upload/c_fill,dl_0,g_auto,h_360,w_640/v1779406816/thebarber/showroom/backgroundaccesoire.jpg",
+      "publicId": "thebarber/showroom/backgroundaccesoire"
+    },
+    {
+      "index": 3,
+      "videoUrl": "https://res.cloudinary.com/dswnmoq8d/video/upload/c_limit,h_1080,q_auto,vc_h264,w_1920/v1779406839/thebarber/showroom/backgroundmarchandise.mp4",
+      "posterUrl": "https://res.cloudinary.com/dswnmoq8d/video/upload/c_fill,dl_0,g_auto,h_360,w_640/v1779406839/thebarber/showroom/backgroundmarchandise.jpg",
+      "publicId": "thebarber/showroom/backgroundmarchandise"
+    }
+  ]
 }
