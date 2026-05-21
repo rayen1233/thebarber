@@ -103,11 +103,13 @@ export async function deleteProductVideo(productId) {
  * @param {string} productId
  * @returns {Promise<string | null>}
  */
-export async function getProductVideoObjectUrl(productId) {
+/**
+ * @param {string} productId
+ * @returns {Promise<Blob | null>}
+ */
+export async function getProductVideoBlob(productId) {
   const id = String(productId || "").trim();
   if (!id) return null;
-  if (blobUrlCache.has(id)) return blobUrlCache.get(id) || null;
-
   const db = await openDb();
   const blob = await new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, "readonly");
@@ -116,7 +118,16 @@ export async function getProductVideoObjectUrl(productId) {
     req.onerror = () => reject(req.error);
   });
   db.close();
-  if (!(blob instanceof Blob)) return null;
+  return blob instanceof Blob ? blob : null;
+}
+
+export async function getProductVideoObjectUrl(productId) {
+  const id = String(productId || "").trim();
+  if (!id) return null;
+  if (blobUrlCache.has(id)) return blobUrlCache.get(id) || null;
+
+  const blob = await getProductVideoBlob(id);
+  if (!blob) return null;
   const url = URL.createObjectURL(blob);
   blobUrlCache.set(id, url);
   return url;

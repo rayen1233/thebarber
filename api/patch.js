@@ -1,3 +1,4 @@
+import { applyApiCors } from "../lib/api-cors.mjs";
 import { loadStore, saveStore } from "../lib/store-server.js";
 
 export const config = {
@@ -11,6 +12,7 @@ export const config = {
 /** @param {import("@vercel/node").VercelRequest} req @param {import("@vercel/node").VercelResponse} res */
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+  if (applyApiCors(req, res)) return;
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");

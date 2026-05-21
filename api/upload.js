@@ -1,10 +1,12 @@
 import { put } from "@vercel/blob";
+import { applyApiCors } from "../lib/api-cors.mjs";
+import { getMediaBlobAccess, hasBlobCredentials } from "../lib/blob-access.mjs";
 import { requireAdmin } from "../lib/store-server.js";
 
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "12mb",
+      sizeLimit: "25mb",
     },
   },
 };
@@ -12,6 +14,7 @@ export const config = {
 /** @param {import("@vercel/node").VercelRequest} req @param {import("@vercel/node").VercelResponse} res */
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+  if (applyApiCors(req, res)) return;
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -23,10 +26,10 @@ export default async function handler(req, res) {
     return res.status(gate.status).json({ error: gate.error });
   }
 
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
+  if (!hasBlobCredentials()) {
     return res.status(503).json({
-      error: "BLOB_READ_WRITE_TOKEN missing. Add Vercel Blob storage to the project.",
+      error:
+        "Blob non configuré. Vercel → Storage → Blob → Connect to Project, puis Redeploy.",
     });
   }
 
@@ -52,15 +55,13 @@ export default async function handler(req, res) {
   const safeExt = String(ext).replace(/[^a-z0-9]/gi, "").slice(0, 8) || "bin";
   const pathname = `thebarber/media/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${safeExt}`;
 
-  const blob = await put(pathname, buffer, {
-    access: "public",
+  const { url } = await put(pathname, buffer, {
+    access: getMediaBlobAccess(),
     contentType,
-    token,
   });
 
   return res.status(200).json({
     ok: true,
-    url: blob.url,
-    pathname: blob.pathname,
+    url,
   });
 }

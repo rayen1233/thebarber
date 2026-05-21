@@ -103,12 +103,43 @@
               </form>
             </div>
 
+            <div
+              id="admin-remote-banner"
+              class="admin-card"
+              hidden
+              style="
+                margin-bottom: 1rem;
+                border-color: rgba(201, 162, 39, 0.35);
+                background: rgba(201, 162, 39, 0.06);
+              "
+            >
+              <h2 style="margin-top: 0">Données sur Vercel</h2>
+              <p class="lede" style="margin: 0 0 1rem; max-width: 52rem">
+                Le site en ligne lit le catalogue depuis le serveur, pas depuis votre PC. Les produits créés sur
+                <strong>localhost</strong> restent dans ce navigateur tant que vous ne les exportez pas puis ne les
+                importez ici (ou ne les publiez pas).
+              </p>
+              <div class="admin-row-actions">
+                <button type="button" class="shop-btn-primary" id="admin-push-server">Publier sur le serveur</button>
+              </div>
+              <p id="admin-remote-status" class="lede" style="margin: 1rem 0 0; font-size: 0.85rem" aria-live="polite"></p>
+            </div>
+
             <div class="admin-card">
               <h2>Catalogue actuel</h2>
               <div class="admin-row-actions" style="margin-bottom: 1rem">
-                <button type="button" class="shop-btn-ghost" id="admin-export">Exporter JSON</button>
-                <button type="button" class="shop-btn-ghost" id="admin-import">Importer JSON</button>
+                <button type="button" class="shop-btn-ghost" id="admin-export">Exporter catalogue (JSON)</button>
+                <button type="button" class="shop-btn-ghost" id="admin-import">Importer catalogue (JSON)</button>
                 <input type="file" id="admin-import-file" accept="application/json" hidden />
+                <button
+                  type="button"
+                  class="shop-btn-primary"
+                  id="admin-migrate-videos"
+                  hidden
+                  title="Envoie les vidéos IndexedDB vers Vercel Blob"
+                >
+                  Publier les vidéos sur Vercel
+                </button>
                 <button type="button" class="shop-btn-ghost" id="admin-clear-all" style="border-color: rgba(200, 100, 80, 0.45); color: #d8a090">
                   Tout effacer
                 </button>
@@ -168,7 +199,7 @@
       </main>
     </div>
     <script type="module" src="./barber-theme.js"></script>
-    <script type="module" src="./shop-bootstrap.js?v=20260522-js"></script>
-    <script type="module" src="./admin.js?v=20260522-js"></script>
+    <script type="module" src="./shop-bootstrap.js?v=20260524-cors"></script>
+    <script type="module" src="./admin.js?v=20260524-cors"></script>
   </body>
 </html>

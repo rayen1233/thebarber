@@ -3,8 +3,20 @@
 ## Prérequis
 
 1. Compte [Vercel](https://vercel.com) + dépôt GitHub `rayen1233/thebarber`
-2. Dans le projet Vercel : **Storage → Blob** (créer un store) — fournit `BLOB_READ_WRITE_TOKEN`
+2. **Storage → Blob** → créer le store → **Connect to Project** (thebarber)  
+   Vercel ajoute `BLOB_READ_WRITE_TOKEN`, `BLOB_STORE_ID`, etc.  
+   **Sans Blob connecté, tout revient à 0 après refresh.**
+
+   Le catalogue est enregistré comme sur la doc Vercel :
+
+   ```js
+   import { put } from "@vercel/blob";
+   await put("thebarber/store.json.gz", data, { access: "private" });
+   ```
+
+   Variable optionnelle `BLOB_STORE_ACCESS` = `private` (défaut) ou `public` selon le type du store.
 3. Variable d’environnement **`ADMIN_SECRET`** (mot de passe admin pour enregistrer le catalogue)
+4. Après avoir ajouté Blob ou modifié les variables : **Redeploy** obligatoire
 
 ## Déployer
 
@@ -25,13 +37,41 @@
 
 En local (`localhost`), le stockage reste **localStorage** + fichier `.data/store.json` pour les API si vous lancez `npm run vercel:dev`.
 
-## Migrer les données actuelles du navigateur
+## Migrer le catalogue créé sur localhost
 
-1. Ouvrez le site en local avec vos produits déjà créés.
-2. Déployez sur Vercel, configurez Blob + `ADMIN_SECRET`.
-3. Ouvrez `https://votre-app.vercel.app/admin.html`, entrez la clé admin — la migration propose d’envoyer le catalogue local vers le serveur si le serveur est vide.
+**Important :** `localhost` et `votre-app.vercel.app` n’ont **pas** le même stockage navigateur. Les produits ajoutés en local ne partent pas automatiquement sur Vercel.
 
-Vous pouvez aussi utiliser **Exporter JSON** dans l’admin puis réimporter après déploiement.
+### Méthode recommandée (export / import)
+
+1. Sur **localhost** : ouvrez `/admin.html` → **Exporter catalogue (JSON)** → enregistrez le fichier.
+2. Sur **Vercel** : ouvrez `/admin.html` → saisissez la **clé admin** (`ADMIN_SECRET`) quand le site le demande.
+3. **Importer catalogue (JSON)** → choisissez le fichier → le catalogue est publié sur le serveur automatiquement.
+4. Ouvrez la page d’accueil du site en ligne : les produits viennent de `GET /api/store`.
+
+Si l’import affiche « JSON invalide » ou échoue dans le navigateur (fichier ~5 Mo avec photos intégrées), utilisez le script :
+
+```powershell
+cd "c:\Users\rayen\Downloads\the barber"
+$env:ADMIN_SECRET="votre-cle-vercel"
+$env:VERCEL_URL="https://thebarber-three.vercel.app"
+node scripts/push-catalog.mjs "C:\Users\rayen\Downloads\barber\thebarber-catalogue-....json"
+```
+
+Sinon, réduisez les images en base64 ou passez aux URLs / upload Blob.
+
+### Vidéos `idb://`
+
+Les vidéos sont dans **IndexedDB** du navigateur (référence `idb://…`), pas dans le JSON.
+
+1. Ouvrez l’admin sur **localhost** (même navigateur qu’à la création des produits).
+2. Cliquez **Publier les vidéos sur Vercel** → URL du site + clé `ADMIN_SECRET`.
+3. Attendez la fin, puis rechargez le site en ligne.
+
+Sinon, ré-uploadez chaque vidéo manuellement dans l’admin Vercel.
+
+### Bouton « Publier sur le serveur »
+
+Sur Vercel uniquement : envoie le contenu actuel de l’admin (ce navigateur) vers le Blob, sans refaire un import.
 
 ## Git push
 

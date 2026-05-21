@@ -6,6 +6,20 @@
 export const STORAGE_PRODUCTS = "thebarber_products_v1";
 export const STORAGE_CART = "thebarber_cart_v1";
 
+/** Fallback when catalogue JSON exceeds localStorage quota (large base64 photos). */
+/** @type {Product[] | null} */
+let productsMemoryCache = null;
+
+/** @param {Product[] | null} list */
+export function setProductsMemoryCache(list) {
+  productsMemoryCache = list;
+}
+
+/** @returns {Product[] | null} */
+export function getProductsMemoryCache() {
+  return productsMemoryCache;
+}
+
 /** @typedef {{ slug: string, label: string }} CategoryDef */
 /** @type {CategoryDef[]} */
 export const CATEGORY_DEFS = [
@@ -109,11 +123,7 @@ function isProductShapeLoose(p) {
   return ok.length >= 1;
 }
 
-/** @returns {Product[]} */
-export function getProducts() {
-  const raw = localStorage.getItem(STORAGE_PRODUCTS);
-  const list = safeParse(raw, []);
-  if (!Array.isArray(list)) return [];
+function mapProductsForDisplay(list) {
   return list.filter(isProductShapeLoose).map((p) => ({
     ...p,
     videoUrl: resolveShopMediaUrl(String(p.videoUrl || "").trim()),
@@ -123,10 +133,33 @@ export function getProducts() {
   }));
 }
 
+/** @returns {Product[]} */
+export function getProducts() {
+  if (productsMemoryCache?.length) {
+    return mapProductsForDisplay(productsMemoryCache);
+  }
+  const raw = localStorage.getItem(STORAGE_PRODUCTS);
+  const list = safeParse(raw, []);
+  if (!Array.isArray(list)) return [];
+  return mapProductsForDisplay(list);
+}
+
 /** @param {Product[]} list */
 export function saveProducts(list) {
+  const json = JSON.stringify(list);
+  const useMemoryOnly = json.length > 1_800_000;
   try {
-    localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(list));
+    if (useMemoryOnly) {
+      productsMemoryCache = list;
+      try {
+        localStorage.removeItem(STORAGE_PRODUCTS);
+      } catch {
+        /* ignore */
+      }
+    } else {
+      localStorage.setItem(STORAGE_PRODUCTS, json);
+      productsMemoryCache = null;
+    }
     window.dispatchEvent(new CustomEvent("thebarber:products-updated"));
     import("./shop-remote.js")
       .then((m) => m.scheduleRemoteSync?.())
@@ -135,9 +168,12 @@ export function saveProducts(list) {
     const name = e && /** @type {Error} */ (e).name;
     const code = e && /** @type {DOMException} */ (e).code;
     if (name === "QuotaExceededError" || code === 22) {
-      throw new Error(
-        "Espace de stockage local saturé (quota navigateur). Utilisez des images via URL, supprimez des produits, ou retirez les grosses vidéos intégrées en base64.",
-      );
+      productsMemoryCache = list;
+      window.dispatchEvent(new CustomEvent("thebarber:products-updated"));
+      import("./shop-remote.js")
+        .then((m) => m.scheduleRemoteSync?.())
+        .catch(() => {});
+      return;
     }
     throw e;
   }

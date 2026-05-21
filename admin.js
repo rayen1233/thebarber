@@ -15,6 +15,7 @@ import {
   productHasVideo,
   isIdbVideoRef,
 } from "./shop-media-store.js";
+import { saveUsers, saveOrders } from "./shop-account-store.js";
 import { initAdminDashboard } from "./admin-dashboard.js";
 import { whenStoreReady } from "./shop-bootstrap.js";
 import {
@@ -22,7 +23,13 @@ import {
   getAdminKey,
   setAdminKey,
   maybeMigrateLocalCatalogToServer,
+  readLocalStorePayload,
+  pushRemoteStore,
+  parseCatalogImportJson,
+  migrateIdbVideosToRemote,
+  fetchRemoteStoreMeta,
 } from "./shop-remote.js";
+import { setProductsMemoryCache } from "./shop-core.js";
 
 function escapeHtml(s) {
   return String(s)
@@ -629,14 +636,20 @@ function main() {
   });
 
   document.getElementById("admin-export")?.addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify(getProducts(), null, 2)], {
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      ...readLocalStorePayload(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
     });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `thebarber-products-${Date.now()}.json`;
+    a.download = `thebarber-catalogue-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
+    setAdminStatus("Export catalogue téléchargé (produits, comptes, commandes).");
   });
 
   document.getElementById("admin-import")?.addEventListener("click", () => {
@@ -649,28 +662,115 @@ function main() {
     if (!file) return;
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
-      if (!Array.isArray(data)) throw new Error("JSON invalide");
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseErr) {
+        const hint =
+          parseErr instanceof Error ? parseErr.message : "syntaxe incorrecte";
+        throw new Error(`Fichier JSON illisible (${hint}). Réexportez depuis l’admin localhost.`);
+      }
+      const parsed = parseCatalogImportJson(data);
+      if (!parsed) {
+        throw new Error(
+          "Format non reconnu. Attendu : tableau de produits, ou objet { products, users?, orders? } (export « catalogue JSON »).",
+        );
+      }
+      const rows = parsed.products;
       const cleaned = [];
-      for (const row of data) {
+      const rejectReasons = [];
+      for (const row of rows) {
         const v = validateProductInput(row);
         if (v.ok) cleaned.push(v.product);
+        else if (rejectReasons.length < 4) {
+          rejectReasons.push(`${String(row?.name || "Produit").slice(0, 40)} : ${v.error}`);
+        }
       }
-      if (!cleaned.length) throw new Error("Aucun produit valide");
-      if (!confirm(`Remplacer le catalogue par ${cleaned.length} produit(s) importé(s) ?`)) return;
+      if (!cleaned.length) {
+        const detail = rejectReasons.length
+          ? `\n\n${rejectReasons.join("\n")}`
+          : "";
+        throw new Error(`Aucun produit valide sur ${rows.length} entrée(s).${detail}`);
+      }
+      const extra =
+        parsed.users.length || parsed.orders.length ? " + comptes/commandes" : "";
+      const idbNote = cleaned.some((p) => isIdbVideoRef(p.videoUrl))
+        ? "\n\nCertaines vidéos sont en stockage local (idb://) : ré-uploadez-les sur Vercel après import."
+        : "";
+      if (
+        !confirm(
+          `Remplacer le catalogue par ${cleaned.length} produit(s) importé(s)${extra} ?${idbNote}`,
+        )
+      )
+        return;
+      if (isRemoteMode()) {
+        await ensureAdminRemoteKey();
+        if (!getAdminKey()) {
+          alert("Clé admin requise (ADMIN_SECRET sur Vercel) avant d’importer un gros catalogue.");
+          inp.value = "";
+          return;
+        }
+        try {
+          await pushRemoteStore({
+            products: cleaned,
+            users: parsed.users,
+            orders: parsed.orders,
+          });
+          setProductsMemoryCache(cleaned);
+          if (parsed.users.length) saveUsers(parsed.users);
+          if (parsed.orders.length) saveOrders(parsed.orders);
+          try {
+            saveProducts(cleaned);
+          } catch {
+            /* catalogue trop lourd pour localStorage : serveur + mémoire suffisent */
+          }
+          renderTable();
+          setAdminStatus(
+            `Import terminé : ${cleaned.length} produit(s) publiés sur Vercel (${(file.size / 1024 / 1024).toFixed(1)} Mo).`,
+          );
+          setRemoteBannerStatus("Catalogue en ligne à jour.");
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Publication serveur impossible.";
+          setAdminStatus(msg, "error");
+          setRemoteBannerStatus(msg, true);
+          alert(msg);
+        }
+        inp.value = "";
+        return;
+      }
       try {
         saveProducts(cleaned);
+        if (parsed.users.length) saveUsers(parsed.users);
+        if (parsed.orders.length) saveOrders(parsed.orders);
       } catch (err) {
         alert(err instanceof Error ? err.message : "Impossible d’enregistrer.");
         inp.value = "";
         return;
       }
       renderTable();
-      setAdminStatus("Import terminé.");
+      setAdminStatus("Import terminé (local). Sur Vercel : exportez ce fichier puis importez-le là-bas.");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Import impossible");
     }
     inp.value = "";
+  });
+
+  document.getElementById("admin-push-server")?.addEventListener("click", async () => {
+    await ensureAdminRemoteKey();
+    if (!getAdminKey()) {
+      alert("Clé admin requise (variable ADMIN_SECRET sur Vercel).");
+      return;
+    }
+    try {
+      await pushRemoteStore();
+      setAdminStatus("Catalogue publié sur le serveur Vercel.");
+      setRemoteBannerStatus("Catalogue en ligne à jour.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Publication impossible.";
+      setAdminStatus(msg, "error");
+      setRemoteBannerStatus(msg, true);
+      alert(msg);
+    }
   });
 
   document.getElementById("admin-clear-all")?.addEventListener("click", () => {
@@ -681,8 +781,111 @@ function main() {
     setAdminStatus("Catalogue effacé.");
   });
 
+  function refreshMigrateVideosButton() {
+    const btn = document.getElementById("admin-migrate-videos");
+    if (!btn) return;
+    const hasIdb = getProducts().some((p) => isIdbVideoRef(p.videoUrl));
+    btn.hidden = isRemoteMode() || !hasIdb;
+  }
+
+  document.getElementById("admin-migrate-videos")?.addEventListener("click", async () => {
+    const baseDefault = "https://thebarber-three.vercel.app";
+    const baseUrl = window
+      .prompt("URL du site Vercel :", baseDefault)
+      ?.trim()
+      .replace(/\/$/, "");
+    if (!baseUrl) return;
+    await ensureAdminRemoteKey();
+    let adminKey = getAdminKey();
+    if (!adminKey) {
+      adminKey = window.prompt("Clé admin (ADMIN_SECRET Vercel) :")?.trim() || "";
+      if (adminKey) setAdminKey(adminKey);
+    }
+    if (!adminKey) {
+      alert("Clé admin requise.");
+      return;
+    }
+    const n = getProducts().filter((p) => isIdbVideoRef(p.videoUrl)).length;
+    if (
+      !confirm(
+        `Envoyer ${n} vidéo(s) depuis ce navigateur vers Vercel Blob ?\n\nGardez le même navigateur où vous avez créé les produits.`,
+      )
+    ) {
+      return;
+    }
+    setAdminStatus("Migration des vidéos en cours…");
+    try {
+      const result = await migrateIdbVideosToRemote({
+        baseUrl,
+        adminKey,
+        onProgress: (msg) => setAdminStatus(msg),
+      });
+      renderTable();
+      refreshMigrateVideosButton();
+      const summary = `${result.uploaded} envoyée(s), ${result.skipped} ignorée(s), ${result.failed} erreur(s).`;
+      setAdminStatus(summary);
+      alert(
+        result.uploaded
+          ? `${summary}\n\nRechargez le site en ligne pour voir les vidéos.`
+          : `${summary}\n\n${result.message || "Ouvrez l’admin sur le même PC/navigateur où les vidéos ont été ajoutées."}`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Migration impossible.";
+      setAdminStatus(msg, "error");
+      alert(msg);
+    }
+  });
+
   renderTable();
-  void migrateCatalogVideosToIdb().then(() => renderTable());
+  refreshMigrateVideosButton();
+  void migrateCatalogVideosToIdb().then(() => {
+    renderTable();
+    refreshMigrateVideosButton();
+  });
+}
+
+function setRemoteBannerStatus(message, isError = false) {
+  const el = document.getElementById("admin-remote-status");
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = isError ? "#d8a090" : "var(--shop-muted)";
+}
+
+async function initRemoteSyncBanner() {
+  const banner = document.getElementById("admin-remote-banner");
+  if (!banner || !isRemoteMode()) return;
+  banner.hidden = false;
+  const n = getProducts().length;
+  try {
+    const meta = await fetchRemoteStoreMeta();
+    if (!meta.blobConfigured) {
+      setRemoteBannerStatus(
+        "⚠ Stockage Vercel Blob non configuré (BLOB_READ_WRITE_TOKEN). Les données ne survivent pas au refresh. Ajoutez Blob dans le projet Vercel puis Redeploy.",
+        true,
+      );
+      return;
+    }
+    if (meta.productCount === 0 && n > 0) {
+      setRemoteBannerStatus(
+        `${n} produit(s) ici mais 0 sur le serveur — cliquez « Publier sur le serveur » avec la clé admin.`,
+        true,
+      );
+      return;
+    }
+    if (meta.productCount > 0) {
+      setRemoteBannerStatus(
+        `Serveur : ${meta.productCount} produit(s). Navigateur : ${n}.`,
+      );
+      return;
+    }
+  } catch {
+    /* ignore */
+  }
+  setRemoteBannerStatus(
+    n
+      ? `${n} produit(s) dans ce navigateur — publiez pour les afficher sur le site public.`
+      : "Serveur vide — importez un export ou publiez le catalogue.",
+  );
 }
 
 async function ensureAdminRemoteKey() {
@@ -698,6 +901,7 @@ async function bootAdmin() {
   await whenStoreReady();
   await ensureAdminRemoteKey();
   main();
+  void initRemoteSyncBanner();
   initAdminDashboard();
   if (isRemoteMode() && getAdminKey()) {
     const migrated = await maybeMigrateLocalCatalogToServer();

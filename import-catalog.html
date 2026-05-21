@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Import catalogue — The Barber</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 36rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.5;
+      }
+      label {
+        display: block;
+        margin: 1rem 0 0.35rem;
+        font-weight: 600;
+      }
+      input[type="password"],
+      input[type="file"] {
+        width: 100%;
+      }
+      button {
+        margin-top: 1.25rem;
+        padding: 0.65rem 1.2rem;
+        cursor: pointer;
+      }
+      #log {
+        margin-top: 1rem;
+        white-space: pre-wrap;
+        font-size: 0.9rem;
+      }
+      .err {
+        color: #a04030;
+      }
+      .ok {
+        color: #2a6b40;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Import catalogue (Vercel)</h1>
+    <p>
+      Page autonome pour publier un export JSON sur le serveur. Utilisez la même clé que
+      <code>ADMIN_SECRET</code> sur Vercel.
+    </p>
+    <label for="key">Clé admin</label>
+    <input id="key" type="password" autocomplete="off" />
+    <label for="file">Fichier JSON (export catalogue)</label>
+    <input id="file" type="file" accept="application/json" />
+    <button type="button" id="go">Publier sur le serveur</button>
+    <p id="log" aria-live="polite"></p>
+    <script type="module">
+      const log = document.getElementById("log");
+      function say(msg, ok) {
+        log.textContent = msg;
+        log.className = ok ? "ok" : "err";
+      }
+
+      function parseImport(data) {
+        if (Array.isArray(data)) {
+          return { products: data, users: [], orders: [] };
+        }
+        if (!data || typeof data !== "object") return null;
+        const products = data.products ?? data.catalogue ?? data.catalog ?? data.items;
+        if (!Array.isArray(products)) return null;
+        return {
+          products,
+          users: Array.isArray(data.users) ? data.users : [],
+          orders: Array.isArray(data.orders) ? data.orders : [],
+        };
+      }
+
+      document.getElementById("go").addEventListener("click", async () => {
+        const key = document.getElementById("key").value.trim();
+        const file = document.getElementById("file").files?.[0];
+        if (!key) return say("Saisissez la clé admin.", false);
+        if (!file) return say("Choisissez un fichier JSON.", false);
+        say("Lecture du fichier…");
+        let data;
+        try {
+          data = JSON.parse(await file.text());
+        } catch (e) {
+          return say(`JSON illisible : ${e.message}`, false);
+        }
+        const parsed = parseImport(data);
+        if (!parsed) {
+          return say(
+            "Format non reconnu. Attendu : [produits] ou { products: [...] }.",
+            false,
+          );
+        }
+        say(`Envoi de ${parsed.products.length} produit(s)…`);
+        try {
+          const res = await fetch("/api/store", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${key}`,
+            },
+            body: JSON.stringify(parsed),
+          });
+          const out = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            return say(`Erreur ${res.status} : ${out.error || res.statusText}`, false);
+          }
+          say(
+            `OK — ${parsed.products.length} produit(s) publiés. Rechargez la boutique.`,
+            true,
+          );
+        } catch (e) {
+          say(e instanceof Error ? e.message : "Échec réseau", false);
+        }
+      });
+    </script>
+  </body>
+</html>
