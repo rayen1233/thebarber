@@ -500,6 +500,129 @@ export async function replaceRemoteCatalog(payload, opts = {}) {
   return { ok: true, productCount: serverCount };
 }
 
+/**
+ * Envoie images/vidéos (data:, idb://) depuis un export JSON vers Blob et met à jour chaque produit sur le serveur.
+ * @param {unknown[]} sourceProducts — produits du fichier export (avec data: ou idb://)
+ * @param {{ onProgress?: (msg: string) => void }} [opts]
+ */
+export async function restoreCatalogMediaFromSource(sourceProducts, opts = {}) {
+  if (!usesRemoteCatalog()) {
+    throw new Error("Clé admin requise pour publier les médias sur Vercel.");
+  }
+  const key = getAdminKey();
+  if (!key) throw new Error("Clé admin requise.");
+
+  const { dataUrlToBlob, isIdbVideoRef, getProductVideoBlob, idbVideoProductId } =
+    await import("./shop-media-store.js");
+
+  const res = await fetch(storeApiUrl("/api/store"), { cache: "no-store" });
+  if (!res.ok) throw new Error(`Lecture serveur impossible (${res.status})`);
+  const remote = await res.json();
+  const serverList = Array.isArray(remote.products) ? remote.products : [];
+
+  const byId = new Map();
+  const byName = new Map();
+  for (const s of sourceProducts) {
+    if (!s || typeof s !== "object") continue;
+    const row = /** @type {{ id?: string, name?: string }} */ (s);
+    if (row.id) byId.set(String(row.id), s);
+    if (row.name) byName.set(String(row.name).trim().toLowerCase(), s);
+  }
+
+  let updated = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (let i = 0; i < serverList.length; i++) {
+    const remoteP = serverList[i];
+    if (!remoteP || typeof remoteP !== "object") continue;
+    const rid = String(/** @type {{ id?: string, name?: string }} */ (remoteP).id || "");
+    const rname = String(/** @type {{ name?: string }} */ (remoteP).name || "")
+      .trim()
+      .toLowerCase();
+    const src =
+      byId.get(rid) || (rname ? byName.get(rname) : null);
+    if (!src || typeof src !== "object") {
+      skipped++;
+      continue;
+    }
+
+    const srcPhotos = Array.isArray(/** @type {{ photos?: unknown[] }} */ (src).photos)
+      ? /** @type {{ photos: unknown[] }} */ (src).photos
+      : [];
+    const srcVideo = String(/** @type {{ videoUrl?: string }} */ (src).videoUrl || "").trim();
+    const hasDataPhotos = srcPhotos.some((u) => String(u).startsWith("data:"));
+    const hasDataVideo = srcVideo.startsWith("data:");
+    const hasIdbVideo = isIdbVideoRef(srcVideo);
+
+    if (!hasDataPhotos && !hasDataVideo && !hasIdbVideo) {
+      skipped++;
+      continue;
+    }
+
+    let work = {
+      .../** @type {Record<string, unknown>} */ (remoteP),
+      photos: hasDataPhotos ? srcPhotos : remoteP.photos,
+      videoUrl: srcVideo || remoteP.videoUrl,
+    };
+
+    const label = String(/** @type {{ name?: string }} */ (remoteP).name || rid || i + 1);
+    opts.onProgress?.(`[${i + 1}/${serverList.length}] ${label}…`);
+
+    try {
+      if (hasDataPhotos) {
+        const uploaded = await uploadInlinePhotosInProducts(
+          [work],
+          (blob, name) => uploadMediaBlob(blob, name),
+          opts.onProgress,
+        );
+        work = uploaded[0] || work;
+      }
+
+      const vid = String(work.videoUrl || "").trim();
+      if (isIdbVideoRef(vid)) {
+        const blob = await getProductVideoBlob(idbVideoProductId(vid));
+        if (blob && blob.size <= MAX_REMOTE_VIDEO_BYTES) {
+          work.videoUrl = await uploadMediaBlob(blob, `${rid || i}.mp4`, {
+            contentType: blob.type || "video/mp4",
+          });
+        }
+      } else if (vid.startsWith("data:")) {
+        work.videoUrl = await uploadMediaBlob(
+          dataUrlToBlob(vid),
+          `${rid || i}.mp4`,
+          { contentType: "video/mp4" },
+        );
+      }
+
+      work.photos = (Array.isArray(work.photos) ? work.photos : [])
+        .map((u) => String(u || "").trim())
+        .filter((u) => u && !u.startsWith("data:") && !u.startsWith("idb://"));
+      if (!work.photos.length) {
+        work.photos = Array.isArray(remoteP.photos) ? remoteP.photos : ["public/vite.svg"];
+      }
+
+      const body = await encodeStorePutBody({
+        merge: true,
+        products: [work],
+        users: [],
+        orders: [],
+      });
+      await putStoreBody(key, body);
+      updated++;
+    } catch (err) {
+      failed++;
+      console.warn("[thebarber] restore media failed", label, err);
+      opts.onProgress?.(
+        `  → erreur : ${err instanceof Error ? err.message : "échec"}`,
+      );
+    }
+  }
+
+  await hydrateAdminFromServer();
+  return { updated, skipped, failed, total: serverList.length };
+}
+
 /** @returns {Promise<{ productCount: number, blobConfigured?: boolean, adminConfigured?: boolean }>} */
 export async function fetchRemoteStoreMeta() {
   if (!usesRemoteCatalog()) {

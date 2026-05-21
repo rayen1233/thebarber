@@ -31,6 +31,7 @@ import {
   pushProductToRemote,
   deleteProductFromRemote,
   replaceRemoteCatalog,
+  restoreCatalogMediaFromSource,
   usesRemoteCatalog,
   getRemoteApiBase,
   setRemoteApiBase,
@@ -852,6 +853,65 @@ function main() {
       alert(err instanceof Error ? err.message : "Import impossible");
     }
     inp.value = "";
+  });
+
+  document.getElementById("admin-restore-media")?.addEventListener("click", async () => {
+    await ensureAdminRemoteKey();
+    if (!usesRemoteCatalog()) {
+      alert("Clé admin + connexion Vercel requises (ou admin sur thebarber-three.vercel.app).");
+      return;
+    }
+    document.getElementById("admin-restore-media-file")?.click();
+  });
+
+  document.getElementById("admin-restore-media-file")?.addEventListener("change", async (e) => {
+    const inp = /** @type {HTMLInputElement} */ (e.target);
+    const file = inp.files && inp.files[0];
+    inp.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const parsed = parseCatalogImportJson(data);
+      if (!parsed?.products?.length) {
+        throw new Error("JSON sans liste de produits.");
+      }
+      const withMedia = parsed.products.filter((p) => {
+        const photos = Array.isArray(p?.photos) ? p.photos : [];
+        const v = String(p?.videoUrl || "");
+        return (
+          photos.some((u) => String(u).startsWith("data:")) ||
+          v.startsWith("data:") ||
+          isIdbVideoRef(v)
+        );
+      });
+      if (!withMedia.length) {
+        alert(
+          "Ce JSON ne contient pas de photos data: ni de vidéos intégrées.\n\nUtilisez l’export fait depuis l’admin où vous aviez ajouté les images, ou ré-uploadez fichier par fichier dans chaque produit.",
+        );
+        return;
+      }
+      if (
+        !confirm(
+          `Envoyer les médias de ${withMedia.length} produit(s) vers Vercel Blob ?\n\nCela peut prendre plusieurs minutes. Gardez l’onglet ouvert.`,
+        )
+      ) {
+        return;
+      }
+      setAdminStatus("Publication des médias vers Blob…");
+      const result = await restoreCatalogMediaFromSource(parsed.products, {
+        onProgress: (msg) => setAdminStatus(msg),
+      });
+      renderTable();
+      refreshMigrateVideosButton();
+      const summary = `${result.updated} mis à jour, ${result.skipped} sans média dans le JSON, ${result.failed} erreur(s).`;
+      setAdminStatus(summary);
+      alert(`${summary}\n\nRechargez la boutique pour voir les images.`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Publication médias impossible.";
+      setAdminStatus(msg, "error");
+      alert(msg);
+    }
   });
 
   document.getElementById("admin-push-server")?.addEventListener("click", async () => {

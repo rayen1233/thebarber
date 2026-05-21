@@ -171,6 +171,15 @@
                 <button
                   type="button"
                   class="shop-btn-primary"
+                  id="admin-restore-media"
+                  title="Même export JSON qu’à l’origine (photos data: / vidéos)"
+                >
+                  Publier images &amp; vidéos (JSON)
+                </button>
+                <input type="file" id="admin-restore-media-file" accept="application/json" hidden />
+                <button
+                  type="button"
+                  class="shop-btn-primary"
                   id="admin-migrate-videos"
                   hidden
                   title="Envoie les vidéos IndexedDB vers Vercel Blob"
@@ -237,6 +246,6 @@
     </div>
     <script type="module" src="./barber-theme.js"></script>
     <script type="module" src="./shop-bootstrap.js?v=20260521-db"></script>
-    <script type="module" src="./admin.js?v=20260522-blob"></script>
+    <script type="module" src="./admin.js?v=20260522-media"></script>
   </body>
 </html>
