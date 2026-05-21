@@ -26,7 +26,9 @@ async function putMediaBlob(pathname, buffer, contentType) {
     const retryPrivate =
       access === "public" &&
       (err?.name === "BlobAccessError" ||
-        /forbidden|access denied|not allowed/i.test(String(err?.message || "")));
+        /forbidden|access denied|not allowed|private store|public access/i.test(
+          String(err?.message || ""),
+        ));
     if (!retryPrivate) throw err;
     return await put(pathname, buffer, { ...base, access: "private" });
   }
