@@ -484,12 +484,14 @@ function renderTable() {
       }
       setAdminStatus("Suppression sur le serveur…");
       try {
-        await deleteProductFromRemote(id, {
+        const out = await deleteProductFromRemote(id, {
           onProgress: (msg) => setAdminStatus(msg),
         });
         deleteProduct(id);
         renderTable();
-        setAdminStatus("Produit supprimé sur le serveur.");
+        setAdminStatus(
+          `Produit supprimé (${out.productCount ?? "?"} restant(s) sur le serveur).`,
+        );
         void initRemoteSyncBanner();
       } catch (err) {
         const msg =

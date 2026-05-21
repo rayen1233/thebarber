@@ -957,6 +957,7 @@ export async function deleteProductFromRemote(id, opts = {}) {
     orders: [],
   });
   const out = await putStoreBody(key, body);
+  const count = out.productCount ?? 0;
 
   const { getProducts, saveProducts } = await import("./shop-core.js");
   const list = getProducts().filter((p) => p.id !== productId);
@@ -966,5 +967,7 @@ export async function deleteProductFromRemote(id, opts = {}) {
     users: readLocalStorePayload().users,
     orders: readLocalStorePayload().orders,
   });
-  return { ok: true, productCount: out.productCount };
+
+  await hydrateAdminFromServer();
+  return { ok: true, productCount: count };
 }

@@ -36,14 +36,19 @@ function parsePutBody(body) {
   return { data: extractStorePayload(row), merge };
 }
 
-/** @param {ReturnType<typeof defaultStore>} data */
+/** @param {ReturnType<typeof defaultStore> & { deletedProductIds?: string[] }} data */
 function prepareStoreForWrite(data) {
   const base = extractStorePayload(data);
-  return {
+  /** @type {ReturnType<typeof defaultStore> & { deletedProductIds?: string[] }} */
+  const out = {
     products: leanProductsForServer(base.products),
     users: base.users,
     orders: base.orders,
   };
+  if (base.deletedProductIds?.length) {
+    out.deletedProductIds = base.deletedProductIds;
+  }
+  return out;
 }
 
 async function verifySavedCount(expected) {
