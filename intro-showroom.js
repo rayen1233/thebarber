@@ -97,6 +97,20 @@ function blobVideoUrlForIndex(i) {
   return resolveShopMediaUrl(`/api/media?pathname=${encodeURIComponent(pathname)}`);
 }
 
+/** Fast CDN path (Vercel static) — avoids serverless /api/media cold start + full-buffer reads. */
+function staticShowroomVideoUrl(i) {
+  const bases = SHOWROOM_VIDEO_BY_INDEX[i];
+  if (!bases?.length || typeof window === "undefined") return "";
+  const origin = window.location.origin;
+  const prefix = pathnameDir();
+  const base = bases[0];
+  try {
+    return new URL(`/public/${base}.mp4`, `${origin}${prefix}`).href;
+  } catch {
+    return `/public/${base}.mp4`;
+  }
+}
+
 function videoCandidatesForIndex(i) {
   const bases = SHOWROOM_VIDEO_BY_INDEX[i];
   if (!bases?.length) return [];
@@ -107,8 +121,8 @@ function videoCandidatesForIndex(i) {
     seen.add(u);
     out.push(u);
   };
-  const blob = blobVideoUrlForIndex(i);
-  if (blob) push(blob);
+  const fast = staticShowroomVideoUrl(i);
+  if (fast) push(fast);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const prefix = pathnameDir();
   for (const base of bases) {
@@ -126,6 +140,8 @@ function videoCandidatesForIndex(i) {
       }
     }
   }
+  const blob = blobVideoUrlForIndex(i);
+  if (blob) push(blob);
   return out;
 }
 
@@ -161,94 +177,12 @@ function isProductionSite() {
   return host !== "localhost" && host !== "127.0.0.1";
 }
 
-/** Scroll container for stacked mobile layout (IntersectionObserver root). */
-function showroomObserverRoot() {
-  return (
-    document.querySelector("#order-showroom .showroom-split") ||
-    document.getElementById("order-showroom")
-  );
-}
-
-/** @type {IntersectionObserver | null} */
-let showroomVideoObserver = null;
-/** @type {IntersectionObserver | null} */
-let showroomPanelLazyObserver = null;
-
-function bindShowroomPanelLazyVideo() {
-  if (showroomPanelLazyObserver) {
-    showroomPanelLazyObserver.disconnect();
-    showroomPanelLazyObserver = null;
-  }
-  const root = showroomObserverRoot();
-  showroomPanelLazyObserver = new IntersectionObserver(
-    (entries) => {
-      if (!isShowroomOpen()) return;
-      for (const entry of entries) {
-        if (!entry.isIntersecting || entry.intersectionRatio < 0.32) continue;
-        const panel = entry.target;
-        if (!(panel instanceof HTMLElement)) continue;
-        const raw = panel.getAttribute("data-split-index");
-        const idx = raw == null || raw === "" ? NaN : Number(raw);
-        if (!Number.isInteger(idx) || idx < 0 || idx > 3) continue;
-        if (!pendingShowroomVideoUrl.has(idx)) continue;
-        void loadShowroomVideoForPanel(idx);
-      }
-    },
-    {
-      root: root instanceof Element ? root : null,
-      threshold: [0, 0.2, 0.32, 0.5],
-      rootMargin: "0px",
-    },
-  );
-  document.querySelectorAll("#order-showroom [data-split-panel]").forEach((panel) => {
-    showroomPanelLazyObserver?.observe(panel);
-  });
-}
-
-function observeShowroomPanelVideo(video) {
-  if (!(video instanceof HTMLVideoElement)) return;
-  if (!showroomVideoObserver) bindShowroomVideoVisibility();
-  showroomVideoObserver?.observe(video);
-}
-
-function bindShowroomVideoVisibility() {
-  if (showroomVideoObserver) {
-    showroomVideoObserver.disconnect();
-    showroomVideoObserver = null;
-  }
-  const root = showroomObserverRoot();
-  showroomVideoObserver = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        const video = entry.target;
-        if (!(video instanceof HTMLVideoElement) || !video.classList.contains("is-loaded")) continue;
-        if (!isShowroomOpen()) {
-          video.pause();
-          continue;
-        }
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.42) {
-          const panel = video.closest("[data-split-panel]");
-          const raw = panel?.getAttribute("data-split-index");
-          const idx = raw == null || raw === "" ? NaN : Number(raw);
-          if (Number.isInteger(idx) && idx >= 0 && idx <= 3) {
-            void loadShowroomVideoForPanel(idx);
-          }
-          if (video.classList.contains("is-loaded")) {
-            video.setAttribute("preload", "auto");
-            const p = video.play();
-            if (p && typeof p.catch === "function") p.catch(() => {});
-          }
-        } else {
-          video.pause();
-        }
-      }
-    },
-    {
-      root: root instanceof Element ? root : null,
-      threshold: [0, 0.25, 0.42, 0.6],
-      rootMargin: "0px",
-    },
-  );
+function tryPlayShowroomVideo(video) {
+  if (!(video instanceof HTMLVideoElement) || !isShowroomOpen()) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  video.setAttribute("preload", "auto");
+  const p = video.play();
+  if (p && typeof p.catch === "function") p.catch(() => {});
 }
 
 function syncShowroomVideoPlayback() {
@@ -258,8 +192,7 @@ function syncShowroomVideoPlayback() {
     return;
   }
   document.querySelectorAll(".showroom-panel__video.is-loaded").forEach((el) => {
-    if (!(el instanceof HTMLVideoElement)) return;
-    observeShowroomPanelVideo(el);
+    if (el instanceof HTMLVideoElement) tryPlayShowroomVideo(el);
   });
 }
 
@@ -292,23 +225,23 @@ async function resolveFirstAssetUrl(urls) {
 
 /** @param {number} i */
 async function resolveShowroomVideoUrl(i) {
-  const blob = blobVideoUrlForIndex(i);
-  if (blob) {
-    const abs = new URL(blob, document.baseURI || window.location.href).href;
-    if (isProductionSite()) return abs;
+  const fast = staticShowroomVideoUrl(i);
+  if (fast && isProductionSite()) return fast;
+  if (fast) {
     try {
-      const res = await fetch(abs, {
-        method: "GET",
-        headers: { Range: "bytes=0-1" },
-        cache: "no-store",
-      });
-      if (res.ok || res.status === 206) return abs;
+      const res = await fetch(fast, { method: "HEAD", cache: "default" });
+      if (res.ok) return fast;
     } catch {
-      /* fall through to static files */
+      /* blob / other candidates */
     }
   }
-  const rest = videoCandidatesForIndex(i).filter((u) => u !== blob);
-  return resolveFirstAssetUrl(rest);
+  const candidates = videoCandidatesForIndex(i);
+  if (fast) {
+    const rest = candidates.filter((u) => u !== fast);
+    const hit = await resolveFirstAssetUrl(rest);
+    return hit || fast;
+  }
+  return resolveFirstAssetUrl(candidates);
 }
 
 /** Panneaux noirs — pas d’images de repli avant la vidéo. */
@@ -410,9 +343,8 @@ function loadShowroomPanelVideo(video, url) {
       return;
     }
     if (video.dataset.showroomSrc === url && video.classList.contains("is-loaded")) {
-      configureShowroomVideo(video);
-      observeShowroomPanelVideo(video);
-      syncShowroomVideoPlayback();
+      configureShowroomVideo(video, { preload: "auto" });
+      tryPlayShowroomVideo(video);
       resolve(true);
       return;
     }
@@ -429,8 +361,7 @@ function loadShowroomPanelVideo(video, url) {
         media.style.backgroundColor = "#030201";
         media.style.backgroundImage = "none";
       }
-      observeShowroomPanelVideo(video);
-      syncShowroomVideoPlayback();
+      tryPlayShowroomVideo(video);
       resolve(true);
     };
     const onErr = () => {
@@ -498,7 +429,6 @@ async function applyShowroomBackgrounds() {
 
   if (!reduceMotion) {
     await ensureShowroomVideoUrls();
-    bindShowroomPanelLazyVideo();
     if (isShowroomOpen()) await primeShowroomVideos();
     return;
   }
@@ -530,10 +460,6 @@ function pauseShowroomPanelVideos() {
   document.querySelectorAll(".showroom-panel__video").forEach((el) => {
     if (el instanceof HTMLVideoElement && !el.paused) el.pause();
   });
-}
-
-function resumeShowroomPanelVideos() {
-  syncShowroomVideoPlayback();
 }
 
 function isShowroomStackLayout() {
@@ -690,9 +616,6 @@ function openShowroom() {
   setShowroomRouteState("opening");
   applySplitLines(null);
   prepareShowroomBlackPlates();
-  void ensureShowroomVideoUrls().then(() => {
-    if (isShowroomOpen()) void primeShowroomVideos();
-  });
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -700,27 +623,26 @@ function openShowroom() {
       el.setAttribute("aria-hidden", "false");
       setShowroomRouteState("open");
       seedShowroomPanelDust();
-      resumeShowroomPanelVideos();
+      void (async () => {
+        try {
+          if (!inited) {
+            inited = true;
+            await applyShowroomBackgrounds();
+          } else {
+            await ensureShowroomVideoUrls();
+            await primeShowroomVideos();
+          }
+          syncShowroomVideoPlayback();
+        } catch (err) {
+          console.error("[showroom] media init failed", err);
+        }
+      })();
     });
   });
 
   window.setTimeout(() => {
     document.body.classList.remove("showroom-route-opening");
   }, SHOWROOM_ROUTE_MS);
-
-  void (async () => {
-    try {
-      if (!inited) {
-        inited = true;
-        await applyShowroomBackgrounds();
-      } else {
-        await ensureShowroomVideoUrls();
-        await primeShowroomVideos();
-      }
-    } catch (err) {
-      console.error("[showroom] media init failed", err);
-    }
-  })();
 }
 
 function closeShowroom() {
@@ -753,6 +675,10 @@ const MCH_TEASER_VIDEO_BASES = [
   "backgroundmarchandises",
 ];
 
+function fastMchTeaserVideoUrl() {
+  return staticShowroomVideoUrl(3);
+}
+
 function mchTeaserVideoCandidates() {
   const out = [];
   const seen = new Set();
@@ -761,6 +687,8 @@ function mchTeaserVideoCandidates() {
     seen.add(u);
     out.push(u);
   };
+  const fast = fastMchTeaserVideoUrl();
+  if (fast) push(fast);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const prefix = pathnameDir();
   for (const base of MCH_TEASER_VIDEO_BASES) {
@@ -857,7 +785,15 @@ async function tryMchTeaserMedia() {
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   if (!reduce && videoEl instanceof HTMLVideoElement) {
-    const hit = await resolveFirstAssetUrl(mchTeaserVideoCandidates());
+    const fast = fastMchTeaserVideoUrl();
+    const hit =
+      fast && isProductionSite()
+        ? fast
+        : fast
+          ? (await fetch(fast, { method: "HEAD", cache: "default" }).then((r) =>
+              r.ok ? fast : null,
+            ).catch(() => null)) || (await resolveFirstAssetUrl(mchTeaserVideoCandidates()))
+          : await resolveFirstAssetUrl(mchTeaserVideoCandidates());
     if (hit) {
       const ok = await loadMchTeaserVideo(videoEl, hit);
       if (ok) {
@@ -1030,8 +966,16 @@ bindSplitLineHover();
 bindShowroomParallax();
 bindMerchTeaser();
 bindMerchTeaserParallax();
-bindShowroomVideoVisibility();
-bindShowroomPanelLazyVideo();
+function prefetchShowroomVideoUrls() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  void ensureShowroomVideoUrls();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", prefetchShowroomVideoUrls);
+} else {
+  prefetchShowroomVideoUrls();
+}
 
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") pauseShowroomPanelVideos();
