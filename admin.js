@@ -711,11 +711,14 @@ function main() {
           return;
         }
         try {
-          await pushRemoteStore({
-            products: cleaned,
-            users: parsed.users,
-            orders: parsed.orders,
-          });
+          await pushRemoteStore(
+            {
+              products: cleaned,
+              users: parsed.users,
+              orders: parsed.orders,
+            },
+            { onProgress: (msg) => setAdminStatus(msg) },
+          );
           setProductsMemoryCache(cleaned);
           if (parsed.users.length) saveUsers(parsed.users);
           if (parsed.orders.length) saveOrders(parsed.orders);
@@ -762,7 +765,9 @@ function main() {
       return;
     }
     try {
-      await pushRemoteStore();
+      await pushRemoteStore(undefined, {
+        onProgress: (msg) => setAdminStatus(msg),
+      });
       setAdminStatus("Catalogue publié sur le serveur Vercel.");
       setRemoteBannerStatus("Catalogue en ligne à jour.");
     } catch (err) {

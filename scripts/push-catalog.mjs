@@ -1,13 +1,9 @@
 /**
- * Pousse un export catalogue JSON vers Vercel (contourne CORS / quota navigateur).
- *
- * Usage (PowerShell) :
- *   $env:ADMIN_SECRET="votre-cle"
- *   $env:VERCEL_URL="https://thebarber-three.vercel.app"
- *   node scripts/push-catalog.mjs "C:\chemin\thebarber-catalogue-....json"
+ * Pousse un export catalogue vers Vercel (images → Blob, puis 1 produit / requête).
  */
 import fs from "node:fs";
 import { gzipSync } from "node:zlib";
+import { dataUrlToBlob, uploadInlinePhotosInProducts } from "../lib/catalog-media.mjs";
 
 const file = process.argv[2];
 const secret = process.env.ADMIN_SECRET;
@@ -18,7 +14,7 @@ if (!file) {
   process.exit(1);
 }
 if (!secret) {
-  console.error("Définissez ADMIN_SECRET (même valeur que sur Vercel).");
+  console.error("Définissez ADMIN_SECRET.");
   process.exit(1);
 }
 
@@ -27,37 +23,60 @@ const products = Array.isArray(raw)
   ? raw
   : raw.products ?? raw.catalogue ?? raw.catalog ?? raw.items;
 if (!Array.isArray(products)) {
-  console.error("Format invalide : pas de liste products.");
+  console.error("Format invalide.");
   process.exit(1);
 }
 
-const payload = {
-  products,
-  users: Array.isArray(raw.users) ? raw.users : [],
-  orders: Array.isArray(raw.orders) ? raw.orders : [],
-};
+async function uploadMedia(blob, filename) {
+  const buf = Buffer.from(await blob.arrayBuffer());
+  const res = await fetch(`${base}/api/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      filename,
+      contentType: blob.type || "application/octet-stream",
+      dataBase64: buf.toString("base64"),
+    }),
+  });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(out.error || `Upload ${res.status}`);
+  return String(out.url || "");
+}
 
-const json = JSON.stringify(payload);
-const gz = gzipSync(Buffer.from(json, "utf8"));
-const body = JSON.stringify({ storeGzipBase64: gz.toString("base64") });
+async function putMerge(chunk) {
+  const json = JSON.stringify(chunk);
+  const gz = gzipSync(Buffer.from(json, "utf8"));
+  const body = JSON.stringify({ merge: true, storeGzipBase64: gz.toString("base64") });
+  const res = await fetch(`${base}/api/store`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${secret}`,
+    },
+    body,
+  });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(out.error || `Store ${res.status}`);
+  return out.productCount ?? 0;
+}
 
-console.log(
-  `Envoi ${products.length} produit(s) — JSON ${(json.length / 1024 / 1024).toFixed(2)} Mo → compressé ${(body.length / 1024 / 1024).toFixed(2)} Mo…`,
+console.log("Upload des images intégrées (data:) vers Blob…");
+const leanProducts = await uploadInlinePhotosInProducts(products, uploadMedia, (msg) =>
+  console.log(msg),
 );
 
-const res = await fetch(`${base}/api/store`, {
-  method: "PUT",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${secret}`,
-  },
-  body,
-});
-
-const out = await res.json().catch(() => ({}));
-if (!res.ok) {
-  console.error("Échec", res.status, out.error || out);
-  process.exit(1);
+let count = 0;
+for (let i = 0; i < leanProducts.length; i++) {
+  console.log(`Produit ${i + 1}/${leanProducts.length}…`);
+  count = await putMerge({
+    merge: true,
+    products: [leanProducts[i]],
+    users: i === 0 && Array.isArray(raw.users) ? raw.users : [],
+    orders: i === 0 && Array.isArray(raw.orders) ? raw.orders : [],
+  });
 }
-console.log("OK — catalogue publié :", out.productCount ?? products.length, "produit(s)");
-console.log("Vérifiez :", `${base}/api/health`);
+
+console.log("OK —", count, "produit(s). Vérifiez:", `${base}/api/health`);

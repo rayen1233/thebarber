@@ -5,7 +5,9 @@ import {
   STORAGE_PRODUCTS,
   setProductsMemoryCache,
   getProductsMemoryCache,
+  saveProducts,
 } from "./shop-core.js";
+import { dataUrlToBlob } from "./shop-media-store.js";
 import {
   STORAGE_USERS,
   STORAGE_ORDERS,
@@ -204,13 +206,15 @@ export async function hydrateRemoteStore() {
   return hydratePromise;
 }
 
+const MAX_PUT_BYTES = 3_200_000;
+
 /**
- * @param {{ products?: unknown[], users?: unknown[], orders?: unknown[] }} payload
+ * @param {Record<string, unknown>} payload
  * @returns {Promise<string>}
  */
 async function encodeStorePutBody(payload) {
   const json = JSON.stringify(payload);
-  if (json.length < 2_500_000 || typeof CompressionStream === "undefined") {
+  if (json.length < MAX_PUT_BYTES || typeof CompressionStream === "undefined") {
     return json;
   }
   const compressed = await new Response(
@@ -219,21 +223,49 @@ async function encodeStorePutBody(payload) {
   const bytes = new Uint8Array(compressed);
   let binary = "";
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return JSON.stringify({ storeGzipBase64: btoa(binary) });
+  const wrapped = { storeGzipBase64: btoa(binary) };
+  if (payload.merge) wrapped.merge = true;
+  return JSON.stringify(wrapped);
 }
 
 /**
- * Push full store (admin).
- * @param {{ products?: unknown[], users?: unknown[], orders?: unknown[] }} [override]
+ * @param {unknown[]} products
+ * @param {(blob: Blob, filename: string) => Promise<string>} upload
+ * @param {(msg: string) => void} [onProgress]
  */
-export async function pushRemoteStore(override) {
-  if (!isRemoteMode()) return { ok: true };
-  const key = getAdminKey();
-  if (!key) {
-    return { ok: false, error: "Clé admin requise pour enregistrer sur le serveur." };
+async function uploadInlinePhotosInProducts(products, upload, onProgress) {
+  const out = [];
+  for (let i = 0; i < products.length; i++) {
+    const p = products[i];
+    if (!p || typeof p !== "object") continue;
+    const row = { .../** @type {Record<string, unknown>} */ (p) };
+    const photos = Array.isArray(row.photos) ? row.photos : [];
+    const nextPhotos = [];
+    onProgress?.(`Photos ${i + 1}/${products.length}…`);
+    for (let j = 0; j < photos.length; j++) {
+      const raw = String(photos[j] || "");
+      if (raw.startsWith("data:image")) {
+        try {
+          const url = await upload(dataUrlToBlob(raw), `p-${row.id || i}-${j}.jpg`);
+          nextPhotos.push(url);
+        } catch {
+          nextPhotos.push(raw);
+        }
+      } else {
+        nextPhotos.push(raw);
+      }
+    }
+    row.photos = nextPhotos;
+    out.push(row);
   }
-  const payload = override || readLocalStorePayload();
-  const body = await encodeStorePutBody(payload);
+  return out;
+}
+
+/**
+ * @param {string} key
+ * @param {string} body
+ */
+async function putStoreBody(key, body) {
   const res = await fetch("/api/store", {
     method: "PUT",
     headers: {
@@ -246,9 +278,68 @@ export async function pushRemoteStore(override) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || `Sync failed (${res.status})`);
   }
-  const out = await res.json().catch(() => ({}));
+  return res.json().catch(() => ({}));
+}
+
+/**
+ * Push full store (admin) — uploads inline images, then sends 1 product per request.
+ * @param {{ products?: unknown[], users?: unknown[], orders?: unknown[] }} [override]
+ * @param {{ onProgress?: (msg: string) => void }} [opts]
+ */
+export async function pushRemoteStore(override, opts = {}) {
+  if (!isRemoteMode()) return { ok: true };
+  const key = getAdminKey();
+  if (!key) {
+    return { ok: false, error: "Clé admin requise pour enregistrer sur le serveur." };
+  }
+  let payload = override || readLocalStorePayload();
+  const products = Array.isArray(payload.products) ? payload.products : [];
+
+  const hasInline = products.some((p) => {
+    const photos = p && typeof p === "object" && Array.isArray(p.photos) ? p.photos : [];
+    return photos.some((u) => String(u).startsWith("data:"));
+  });
+
+  if (hasInline) {
+    opts.onProgress?.("Envoi des images vers Vercel Blob…");
+    const uploaded = await uploadInlinePhotosInProducts(
+      products,
+      (blob, name) => uploadMediaBlob(blob, name),
+      opts.onProgress,
+    );
+    payload = { ...payload, products: uploaded };
+    saveProducts(/** @type {import("./shop-core.js").Product[]} */ (uploaded));
+  }
+
+  let lastCount = 0;
+  const list = Array.isArray(payload.products) ? payload.products : [];
+
+  for (let i = 0; i < list.length; i++) {
+    opts.onProgress?.(`Catalogue ${i + 1}/${list.length}…`);
+    const chunk = {
+      merge: true,
+      products: [list[i]],
+      users: i === 0 ? payload.users || [] : [],
+      orders: i === 0 ? payload.orders || [] : [],
+    };
+    const body = await encodeStorePutBody(chunk);
+    if (body.length > MAX_PUT_BYTES) {
+      throw new Error(
+        `Produit « ${list[i]?.name || i + 1} » trop lourd même seul — compressez les images.`,
+      );
+    }
+    const out = await putStoreBody(key, body);
+    lastCount = out.productCount ?? lastCount;
+  }
+
+  if (!list.length) {
+    const body = await encodeStorePutBody({ merge: false, ...payload });
+    const out = await putStoreBody(key, body);
+    lastCount = out.productCount ?? 0;
+  }
+
   await saveStoreSnapshotIdb(payload);
-  return { ok: true, productCount: out.productCount ?? payload.products.length };
+  return { ok: true, productCount: lastCount };
 }
 
 /** @returns {Promise<{ productCount: number, blobConfigured?: boolean, adminConfigured?: boolean }>} */

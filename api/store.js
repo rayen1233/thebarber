@@ -3,20 +3,27 @@ import { applyApiCors } from "../lib/api-cors.mjs";
 import {
   loadStore,
   saveStore,
+  mergeStore,
   requireAdmin,
   defaultStore,
   storeEnvStatus,
 } from "../lib/store-server.js";
 
-/** @param {unknown} body */
+/**
+ * @param {unknown} body
+ * @returns {{ data: ReturnType<typeof defaultStore>, merge: boolean }}
+ */
 function parsePutBody(body) {
-  if (!body || typeof body !== "object") return defaultStore();
+  if (!body || typeof body !== "object") {
+    return { data: defaultStore(), merge: false };
+  }
   const row = /** @type {Record<string, unknown>} */ (body);
+  const merge = Boolean(row.merge);
   if (typeof row.storeGzipBase64 === "string" && row.storeGzipBase64.trim()) {
     const json = gunzipSync(Buffer.from(row.storeGzipBase64, "base64")).toString("utf8");
-    return JSON.parse(json);
+    return { data: JSON.parse(json), merge };
   }
-  return body;
+  return { data: body, merge };
 }
 
 export const config = {
@@ -33,16 +40,31 @@ export default async function handler(req, res) {
   if (applyApiCors(req, res)) return;
 
   if (req.method === "GET") {
-    const store = await loadStore();
-    const env = storeEnvStatus();
-    return res.status(200).json({
-      ...store,
-      _meta: {
-        productCount: store.products.length,
-        blobConfigured: env.blob,
-        adminConfigured: env.admin,
-      },
-    });
+    try {
+      const store = await loadStore();
+      const env = storeEnvStatus();
+      return res.status(200).json({
+        ...store,
+        _meta: {
+          productCount: store.products.length,
+          blobConfigured: env.blob,
+          adminConfigured: env.admin,
+          blobAccess: env.blobAccess,
+        },
+      });
+    } catch (err) {
+      console.error("[store] GET failed", err);
+      const env = storeEnvStatus();
+      return res.status(200).json({
+        ...defaultStore(),
+        _meta: {
+          productCount: 0,
+          blobConfigured: env.blob,
+          adminConfigured: env.admin,
+          error: err instanceof Error ? err.message : "load failed",
+        },
+      });
+    }
   }
 
   if (req.method === "PUT") {
@@ -50,24 +72,26 @@ export default async function handler(req, res) {
     if (!gate.ok) {
       return res.status(gate.status).json({ error: gate.error });
     }
-    let body;
+    let parsed;
     try {
-      body = parsePutBody(req.body);
+      parsed = parsePutBody(req.body);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Invalid body";
       return res.status(400).json({ error: `Catalogue illisible : ${msg}` });
     }
     try {
-      const saved = await saveStore(body);
+      const saved = parsed.merge
+        ? await mergeStore(parsed.data)
+        : await saveStore(parsed.data);
       return res.status(200).json({
         ok: true,
-        store: saved,
         productCount: saved.products.length,
       });
     } catch (err) {
       console.error("[store] save failed", err);
       const msg = err instanceof Error ? err.message : "Save failed";
-      return res.status(500).json({ error: msg });
+      const status = /too large|413|payload/i.test(msg) ? 413 : 500;
+      return res.status(status).json({ error: msg });
     }
   }
 

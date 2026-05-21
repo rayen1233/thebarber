@@ -27,7 +27,7 @@ export function productHasVideo(product) {
  * @param {string} dataUrl
  * @returns {Blob}
  */
-function dataUrlToBlob(dataUrl) {
+export function dataUrlToBlob(dataUrl) {
   const parts = dataUrl.split(",");
   const head = parts[0] || "";
   const b64 = parts.slice(1).join(",");
