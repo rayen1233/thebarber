@@ -342,9 +342,16 @@ async function hydrateListCardMedia(products) {
       if (poster) video.setAttribute("poster", poster);
       else video.removeAttribute("poster");
       const src = await resolveProductVideoUrl(p);
-      if (src) video.dataset.src = src;
-      else delete video.dataset.src;
-      video.removeAttribute("src");
+      if (src) {
+        video.dataset.src = src;
+        if (video.src !== src) {
+          video.src = src;
+          video.load();
+        }
+      } else {
+        delete video.dataset.src;
+        video.removeAttribute("src");
+      }
     }),
   );
 }
@@ -388,27 +395,18 @@ function playListCardVideo(video) {
   configureListCardVideoEl(video);
   video.setAttribute("preload", "auto");
   const pending = video.dataset.src;
-  if (pending && video.src !== pending) {
+  if (pending && !video.src) {
     video.src = pending;
     video.load();
   }
+  if (!video.paused && video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return;
   const run = () => {
-    if (!video.paused && !video.ended) return;
+    if (!video.paused && video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return;
     const p = video.play();
     if (p && typeof p.catch === "function") p.catch(() => {});
   };
-  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) run();
-  else {
-    video.addEventListener("loadeddata", run, { once: true });
-    video.addEventListener("canplay", run, { once: true });
-  }
-}
-
-/**
- * @param {HTMLVideoElement} video
- */
-function pauseListCardVideo(video) {
-  if (!video.paused) video.pause();
+  if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) run();
+  else video.addEventListener("canplaythrough", run, { once: true });
 }
 
 function wireListVideos() {
@@ -463,7 +461,6 @@ function wireListVideos() {
         const video = card.querySelector(".shop-bc-card__media video.shop-bc-card__video");
         if (!(video instanceof HTMLVideoElement)) return;
         if (ent.isIntersecting) playListCardVideo(video);
-        else pauseListCardVideo(video);
       });
     },
     {
