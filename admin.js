@@ -937,13 +937,6 @@ function main() {
     }
   });
 
-  function refreshMigrateVideosButton() {
-    const btn = document.getElementById("admin-migrate-videos");
-    if (!btn) return;
-    const hasIdb = getAdminCatalogProducts().some((p) => isIdbVideoRef(p.videoUrl));
-    btn.hidden = isRemoteMode() || !hasIdb;
-  }
-
   document.getElementById("admin-migrate-videos")?.addEventListener("click", async () => {
     const baseDefault = "https://thebarber-three.vercel.app";
     const baseUrl = window
@@ -998,6 +991,13 @@ function main() {
     renderTable();
     refreshMigrateVideosButton();
   });
+}
+
+function refreshMigrateVideosButton() {
+  const btn = document.getElementById("admin-migrate-videos");
+  if (!btn) return;
+  const hasIdb = getAdminCatalogProducts().some((p) => isIdbVideoRef(p.videoUrl));
+  btn.hidden = isRemoteMode() || !hasIdb;
 }
 
 function setRemoteBannerStatus(message, isError = false) {
