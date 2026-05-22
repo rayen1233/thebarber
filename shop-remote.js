@@ -1207,6 +1207,68 @@ export async function migrateIdbVideosToRemote(opts) {
 }
 
 /**
+ * Migre les vidéos produit Cloudinary du catalogue serveur vers Vercel Blob.
+ * @param {{ baseUrl?: string, adminKey?: string, onProgress?: (msg: string) => void }} opts
+ */
+export async function migrateCloudinaryVideosToRemote(opts = {}) {
+  const baseUrl = String(opts.baseUrl || remoteApiBaseForUpload(opts) || getRemoteApiBase())
+    .replace(/\/$/, "");
+  const adminKey = String(opts.adminKey || getAdminKey() || "").trim();
+  if (!baseUrl || !adminKey) {
+    throw new Error("URL Vercel et clé admin requises.");
+  }
+
+  opts.onProgress?.("Migration Cloudinary → Vercel Blob…");
+  const res = await fetch(`${baseUrl}/api/migrate-cloudinary-products`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${adminKey}`,
+      "X-Admin-Key": adminKey,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || `Migration refusée (${res.status})`);
+  }
+
+  const { normalizeVideoUrlForCatalog } = await import("./lib/blob-media-url.mjs");
+  const { getProducts, saveProducts, setProductsMemoryCache } = await import("./shop-core.js");
+  const remoteProducts = Array.isArray(data.products) ? data.products : [];
+  if (remoteProducts.length) {
+    const normalized = remoteProducts.map((p) => {
+      if (!p || typeof p !== "object") return p;
+      const row = { ...p };
+      const vid = String(row.videoUrl || "").trim();
+      if (vid) row.videoUrl = normalizeVideoUrlForCatalog(vid);
+      const poster = String(row.videoPosterUrl || "").trim();
+      if (poster) row.videoPosterUrl = normalizeVideoUrlForCatalog(poster);
+      return row;
+    });
+    setProductsMemoryCache(normalized);
+    saveProducts(normalized, { skipRemoteSync: true });
+    await saveStoreSnapshotIdb(readLocalStorePayload());
+  } else if (typeof window !== "undefined") {
+    try {
+      await hydrateAdminFromServer();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  opts.onProgress?.(data.message || "Migration terminée.");
+  return {
+    migrated: data.migrated ?? 0,
+    skipped: data.skipped ?? 0,
+    failed: data.failed ?? 0,
+    message: data.message || "",
+    details: data.details || [],
+  };
+}
+
+/**
  * If server store is empty but this browser has catalog data, offer one-time push.
  * @returns {Promise<boolean>} true if pushed
  */

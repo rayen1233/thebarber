@@ -17,6 +17,7 @@ import {
   idbVideoProductId,
   getProductVideoBlob,
   putProductVideo,
+  isCloudinaryProductVideoUrl,
 } from "./shop-media-store.js";
 import { saveUsers, saveOrders } from "./shop-account-store.js";
 import { initAdminDashboard, refreshAdminDashboard } from "./admin-dashboard.js";
@@ -24,6 +25,7 @@ import {
   hydrateRemoteStore,
   parseCatalogImportJson,
   migrateIdbVideosToRemote,
+  migrateCloudinaryVideosToRemote,
   restoreCatalogMediaFromSource,
 } from "./shop-remote.js";
 import {
@@ -379,6 +381,7 @@ function collectPhotos(container) {
 function videoStatusLabel(p) {
   if (!productHasVideo(p)) return "—";
   if (isIdbVideoRef(p.videoUrl)) return "IDB (à migrer)";
+  if (isCloudinaryProductVideoUrl(p.videoUrl)) return "Cloudinary (à migrer)";
   if (String(p.videoUrl).startsWith("data:")) return "data (inline)";
   if (/\/api\/media\?|\.blob\.vercel-storage/i.test(String(p.videoUrl))) return "Vercel Blob";
   return "Oui";
@@ -1033,6 +1036,58 @@ function main() {
     }
   });
 
+  document.getElementById("admin-migrate-cloudinary")?.addEventListener("click", async () => {
+    const baseDefault = getRemoteApiBase() || DEFAULT_REMOTE_API_BASE;
+    const baseUrl = (
+      isRemoteMode()
+        ? window.location.origin
+        : window.prompt("URL du site Vercel :", baseDefault)?.trim()
+    )?.replace(/\/$/, "");
+    if (!baseUrl) return;
+    await ensureAdminRemoteKey();
+    let adminKey = getAdminKey();
+    if (!adminKey) {
+      adminKey = window.prompt("Clé admin (ADMIN_SECRET Vercel) :")?.trim() || "";
+      if (adminKey) setAdminKey(adminKey);
+    }
+    if (!adminKey) {
+      alert("Clé admin requise.");
+      return;
+    }
+    const n = getAdminCatalogProducts().filter((p) =>
+      isCloudinaryProductVideoUrl(p.videoUrl),
+    ).length;
+    if (
+      !confirm(
+        `Migrer ${n} vidéo(s) Cloudinary vers Vercel Blob sur le catalogue en ligne ?\n\nLes URLs du catalogue seront mises à jour.`,
+      )
+    ) {
+      return;
+    }
+    setAdminStatus("Migration Cloudinary → Blob…");
+    try {
+      const result = await migrateCloudinaryVideosToRemote({
+        baseUrl,
+        adminKey,
+        onProgress: (msg) => setAdminStatus(msg),
+      });
+      await refreshAdminCatalog();
+      renderTable();
+      refreshMigrateVideosButton();
+      const summary = `${result.migrated} migrée(s), ${result.skipped} ignorée(s), ${result.failed} erreur(s).`;
+      setAdminStatus(summary);
+      alert(
+        result.migrated
+          ? `${summary}\n\nRechargez la boutique en ligne.`
+          : `${summary}\n\n${result.message || ""}`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Migration impossible.";
+      setAdminStatus(msg, "error");
+      alert(msg);
+    }
+  });
+
   document.getElementById("admin-migrate-videos")?.addEventListener("click", async () => {
     const baseDefault = "https://thebarber-three.vercel.app";
     const baseUrl = window
@@ -1090,10 +1145,13 @@ function main() {
 }
 
 function refreshMigrateVideosButton() {
-  const btn = document.getElementById("admin-migrate-videos");
-  if (!btn) return;
-  const hasIdb = getAdminCatalogProducts().some((p) => isIdbVideoRef(p.videoUrl));
-  btn.hidden = isRemoteMode() || !hasIdb;
+  const idbBtn = document.getElementById("admin-migrate-videos");
+  const cloudBtn = document.getElementById("admin-migrate-cloudinary");
+  const products = getAdminCatalogProducts();
+  const hasIdb = products.some((p) => isIdbVideoRef(p.videoUrl));
+  const hasCloud = products.some((p) => isCloudinaryProductVideoUrl(p.videoUrl));
+  if (idbBtn) idbBtn.hidden = isRemoteMode() || !hasIdb;
+  if (cloudBtn) cloudBtn.hidden = !hasCloud;
 }
 
 function setRemoteBannerStatus(message, isError = false) {

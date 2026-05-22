@@ -4,6 +4,9 @@
 
 import { getProducts, saveProducts, resolveShopMediaUrl } from "./shop-core.js";
 import { normalizeVideoUrlForCatalog } from "./lib/blob-media-url.mjs";
+import { isCloudinaryProductVideoUrl } from "./lib/product-video-url.mjs";
+
+export { isCloudinaryProductVideoUrl };
 
 const DB_NAME = "thebarber_media_v1";
 const DB_VERSION = 1;
