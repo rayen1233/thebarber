@@ -26,6 +26,14 @@ try {
     await copyEntry(name);
   }
   await fs.copyFile(path.join(root, "intro.html"), path.join(root, "index.html"));
+  const introMp4 = path.join(root, "intro.mp4");
+  try {
+    await fs.access(introMp4);
+    await fs.copyFile(introMp4, path.join(publicDir, "intro.mp4"));
+    await fs.copyFile(introMp4, path.join(root, "intro.mp4"));
+  } catch {
+    /* intro.mp4 optional at repo root */
+  }
   console.log("[prepare-vercel] public/ → root, intro.html → index.html");
 } catch (err) {
   console.error("[prepare-vercel] failed", err);
