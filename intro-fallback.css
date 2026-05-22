@@ -1,0 +1,525 @@
+/* CSS logo intro when video fails (mobile / slow load) */
+:root {
+  --intro-css-ms: 3600;
+}
+
+.intro__fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  background: #000;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.intro.intro--css-fallback .intro__media {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.intro.intro--css-fallback .intro__fallback {
+  opacity: 1;
+  visibility: visible;
+}
+
+.intro.intro--css-fallback > .intro__vig {
+  opacity: 0;
+}
+
+.intro__fallback .intro-smokes {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.intro__fallback .intro-smoke {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(88px);
+  opacity: 0.045;
+  mix-blend-mode: normal;
+}
+
+.intro__fallback .intro-smoke:nth-child(1) {
+  width: 95%;
+  height: 80%;
+  left: 18%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(42, 40, 46, 0.68) 0%,
+    rgba(28,26,32,0.3) 45%,
+    transparent 68%
+  );
+  animation: smoke-a 16s linear 0s infinite;
+}
+
+.intro__fallback .intro-smoke:nth-child(2) {
+  width: 85%;
+  height: 72%;
+  left: 62%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(36, 34, 40, 0.62) 0%,
+    rgba(22,20,26,0.28) 42%,
+    transparent 65%
+  );
+  animation: smoke-b 19s linear 0.12s infinite;
+}
+
+.intro__fallback .intro-smoke:nth-child(3) {
+  width: 100%;
+  height: 68%;
+  left: 44%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(38, 36, 42, 0.58) 0%,
+    rgba(18,16,22,0.22) 48%,
+    transparent 62%
+  );
+  animation: smoke-c 14s linear 0.08s infinite;
+}
+
+/* 4th deep low plume with warm gold tint */
+.intro__fallback .intro-smoke:nth-child(4) {
+  width: 110%;
+  height: 55%;
+  left: 50%;
+  top: 72%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(48, 38, 18, 0.45) 0%,
+    rgba(30,22,8,0.18) 42%,
+    transparent 65%
+  );
+  filter: blur(110px);
+  opacity: 0.06;
+  animation: smoke-a 22s linear 3s infinite;
+}
+
+@keyframes smoke-a {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) translate(0, 0);
+    opacity: 0.03;
+  }
+  50% {
+    transform: translate(-50%, -50%) translate(14px, 6px);
+    opacity: 0.055;
+  }
+}
+
+@keyframes smoke-b {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) translate(0, 0);
+    opacity: 0.028;
+  }
+  50% {
+    transform: translate(-50%, -50%) translate(-12px, 8px);
+    opacity: 0.052;
+  }
+}
+
+@keyframes smoke-c {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) translate(0, 0);
+    opacity: 0.032;
+  }
+  50% {
+    transform: translate(-50%, -50%) translate(10px, -5px);
+    opacity: 0.05;
+  }
+}
+
+.intro__fallback .intro-dust {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.intro__fallback .intro-dust span {
+  position: absolute;
+  border-radius: 50%;
+  background: #e6d2a8;
+  box-shadow:
+    0 0 8px rgba(201, 162, 39, 0.32),
+    0 0 18px rgba(180, 145, 70, 0.14);
+  filter: blur(var(--dust-blur, 0.85px));
+  opacity: var(--dust-op, 0.28);
+  animation: dust-float var(--dust-dur, 5.5s) ease-in-out infinite;
+  animation-delay: var(--dust-del, 0s);
+  animation-fill-mode: both;
+  min-width: 2px;
+  min-height: 2px;
+}
+
+@keyframes dust-float {
+  0% {
+    opacity: 0.2;
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    opacity: 0.38;
+    transform: translateY(-6px) translateX(3px);
+  }
+  50% {
+    opacity: 0.22;
+    transform: translateY(-12px) translateX(-2px);
+  }
+  75% {
+    opacity: 0.34;
+    transform: translateY(-5px) translateX(4px);
+  }
+  100% {
+    opacity: 0.24;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+.intro__fallback .intro-camera {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1400px;
+}
+
+.intro__fallback .intro-depth {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: min(72vh, 520px);
+  width: 100%;
+  max-width: min(92vw, 480px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 clamp(1rem, 4vw, 1.75rem);
+  transform-style: preserve-3d;
+  animation: depth-rise 1.8s cubic-bezier(0.22, 0.08, 0.18, 1) 0.2s both;
+}
+
+@keyframes depth-rise {
+  from {
+    transform: translateY(18px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.intro__fallback .cine-logo-box {
+  position: relative;
+  z-index: 3;
+  width: min(82vw, 360px);
+  min-height: min(52vh, 280px);
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  isolation: isolate;
+}
+
+/* Mask stack: shine + flow clipped to logo alpha â€” no halo on black */
+.intro__fallback .cine-logo-stack {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  min-height: min(52vh, 280px);
+  max-width: 100%;
+  transform: scale(0.90);
+  transform-origin: center center;
+  -webkit-mask-image: url("logo.png");
+  mask-image: url("logo.png");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  animation: stack-entrance 2s cubic-bezier(0.22, 0.08, 0.18, 1) 0.3s forwards;
+}
+
+@keyframes stack-entrance {
+  0%   { transform: scale(0.90); }
+  72%  { transform: scale(1.022); }
+  100% { transform: scale(1); }
+}
+
+@media (min-width: 640px) {
+  .cine-logo-box {
+    width: min(58vw, 420px);
+    min-height: min(50vh, 320px);
+  }
+
+  .cine-logo-stack {
+    min-height: min(50vh, 320px);
+  }
+}
+
+.cine-logo-base,
+.intro__fallback .cine-logo-lit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.intro__fallback .cine-logo-base {
+  z-index: 1;
+  opacity: 0;
+  filter: brightness(0.38) contrast(1.02) saturate(0.88);
+  animation: base-in 1.2s ease-out 0.4s forwards,
+    base-away 0.35s ease-in 1.95s forwards;
+}
+
+@keyframes base-in {
+  to {
+    opacity: 0.08;
+  }
+}
+
+@keyframes base-away {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* Main pass: black hold â†’ fade + blur-to-sharp â†’ richer gold â†’ breath glow */
+.intro__fallback .cine-logo-lit {
+  z-index: 2;
+  opacity: 0;
+  filter: blur(12px) brightness(0.5) contrast(1.05) saturate(0.8);
+  animation: lit-master 2.6s cubic-bezier(0.22, 0.08, 0.18, 1) 0s forwards,
+             logo-breathe 3.5s ease-in-out 2.6s infinite;
+}
+
+@keyframes lit-master {
+  0%, 16.666% {
+    opacity: 0;
+    filter: blur(12px) brightness(0.5) contrast(1.05) saturate(0.8);
+  }
+  72% {
+    opacity: 1;
+    filter: blur(0) brightness(1.32) contrast(1.16) saturate(1.1);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0) brightness(1.92) contrast(1.14) saturate(1.18);
+  }
+}
+
+@keyframes logo-breathe {
+  0%, 100% { filter: blur(0) brightness(1.88) contrast(1.14) saturate(1.18); }
+  50%       { filter: blur(0) brightness(2.08) contrast(1.16) saturate(1.22); }
+}
+
+/* Gold glow halo expanding behind logo */
+.intro__fallback .logo-halo {
+  position: absolute;
+  inset: -45%;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(180, 145, 55, 0.22) 0%,
+    rgba(140, 108, 32, 0.1) 38%,
+    transparent 65%
+  );
+  filter: blur(28px);
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation: halo-in 2.2s ease-out 0.8s forwards,
+             halo-breathe 3.8s ease-in-out 3s infinite;
+}
+
+@keyframes halo-in {
+  0%  { opacity: 0;    transform: scale(0.8); }
+  60% { opacity: 0.75; transform: scale(1.05); }
+  100%{ opacity: 0.55; transform: scale(1); }
+}
+
+@keyframes halo-breathe {
+  0%, 100% { opacity: 0.52; transform: scale(1); }
+  50%       { opacity: 0.72; transform: scale(1.06); }
+}
+
+/* Soft metallic gradient drift, clipped to logo â€” ends before shine */
+.intro__fallback .logo-metal-flow {
+  position: absolute;
+  inset: -5%;
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  opacity: 0;
+  background: linear-gradient(
+    118deg,
+    rgba(110, 88, 48, 0) 0%,
+    rgba(180, 152, 88, 0.2) 40%,
+    rgba(255, 248, 220, 0.32) 50%,
+    rgba(160, 135, 80, 0.18) 60%,
+    rgba(110, 88, 48, 0) 100%
+  );
+  background-size: 240% 100%;
+  background-position: 72% 50%;
+  animation: metal-flow 2.2s cubic-bezier(0.22, 0.08, 0.18, 1) 0.4s forwards;
+}
+
+@keyframes metal-flow {
+  0%  { opacity: 0;    background-position: 72% 50%; }
+  18% { opacity: 0.48; }
+  82% { opacity: 0.38; }
+  100%{ opacity: 0;    background-position: 28% 50%; }
+}
+
+/* Narrow diagonal reflection â€” clipped by .cine-logo-stack mask */
+.intro__fallback .logo-shine {
+  position: absolute;
+  top: 50%;
+  left: -40%;
+  width: 22%;
+  height: 170%;
+  z-index: 4;
+  pointer-events: none;
+  transform: translateY(-50%) rotate(24deg);
+  transform-origin: center center;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.72),
+    rgba(230, 200, 80, 0.45),
+    transparent
+  );
+  filter: blur(9px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: logoShineSweep 0.55s cubic-bezier(0.25, 0.1, 0.2, 1) 2.42s forwards;
+}
+
+@keyframes logoShineSweep {
+  0%  { left: -40%; opacity: 1; }
+  80% { opacity: 1; }
+  100%{ left: 122%; opacity: 0; }
+}
+
+/* Second narrower echo shine */
+.intro__fallback .logo-shine-2 {
+  position: absolute;
+  top: 50%;
+  left: -40%;
+  width: 10%;
+  height: 170%;
+  z-index: 4;
+  pointer-events: none;
+  transform: translateY(-50%) rotate(24deg);
+  transform-origin: center center;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    rgba(230, 200, 80, 0.28),
+    transparent
+  );
+  filter: blur(5px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: logoShineSweep2 0.45s cubic-bezier(0.25, 0.1, 0.2, 1) 2.68s forwards;
+}
+
+@keyframes logoShineSweep2 {
+  0%  { left: -40%; opacity: 0.85; }
+  78% { opacity: 0.85; }
+  100%{ left: 122%; opacity: 0; }
+}
+
+/* Accent sparkle on calligraphic curve */
+.intro__fallback .logo-sparkle {
+  position: absolute;
+  left: 62%;
+  top: 40%;
+  z-index: 5;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 235, 180, 0.65) 32%,
+    rgba(200, 165, 80, 0.22) 60%,
+    transparent 75%
+  );
+  filter: blur(0.5px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: scale(0.65);
+  animation: logoSparkle 0.35s ease-out 2.92s forwards;
+}
+
+@keyframes logoSparkle {
+  0%  { opacity: 0;   transform: scale(0.5);  }
+  35% { opacity: 1;   transform: scale(1.12); }
+  100%{ opacity: 0;   transform: scale(0.8);  }
+}
+
+/* Secondary smaller sparkle */
+.intro__fallback .logo-sparkle-2 {
+  position: absolute;
+  left: 38%;
+  top: 62%;
+  z-index: 5;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 228, 165, 0.5) 40%,
+    transparent 72%
+  );
+  filter: blur(0.3px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: scale(0.4);
+  animation: logoSparkle2 0.28s ease-out 3.12s forwards;
+}
+
+@keyframes logoSparkle2 {
+  0%  { opacity: 0;   transform: scale(0.4); }
+  40% { opacity: 0.8; transform: scale(1);   }
+  100%{ opacity: 0;   transform: scale(0.7); }
+}
+
+/* Reduced motion */
