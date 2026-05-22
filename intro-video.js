@@ -1,12 +1,11 @@
 /**
- * Fullscreen intro.mp4 — load aggressively, play when ready, fade to homepage.
+ * Fullscreen intro.mp4 — play once, no loop, fade to homepage when ended.
  */
 
-const LOAD_TIMEOUT_MS = 20000;
 const MAX_INTRO_MS = 120000;
 
 /** @type {string[]} */
-const VIDEO_PATHS = ["intro.mp4", "./intro.mp4", "public/intro.mp4", "/intro.mp4"];
+const VIDEO_PATHS = ["intro.mp4", "public/intro.mp4", "/intro.mp4"];
 
 /**
  * @param {() => void} onReveal
@@ -19,9 +18,9 @@ export function initVideoIntro(onReveal) {
   const base = document.baseURI || window.location.href;
 
   let finished = false;
-  let loadTimeoutId = 0;
-  let maxId = 0;
+  let playbackStarted = false;
   let pathIndex = 0;
+  let maxId = 0;
   let endedBound = false;
 
   const dissolve =
@@ -31,9 +30,7 @@ export function initVideoIntro(onReveal) {
     ) || 900;
 
   function clearTimers() {
-    if (loadTimeoutId) window.clearTimeout(loadTimeoutId);
     if (maxId) window.clearTimeout(maxId);
-    loadTimeoutId = 0;
     maxId = 0;
   }
 
@@ -41,6 +38,12 @@ export function initVideoIntro(onReveal) {
     if (finished) return;
     finished = true;
     clearTimers();
+
+    if (video) {
+      video.pause();
+      video.loop = false;
+      video.removeAttribute("loop");
+    }
 
     document.body.classList.add("intro-reveal");
     if (intro) intro.classList.add("is-done");
@@ -60,11 +63,41 @@ export function initVideoIntro(onReveal) {
     return new URL(p, base).href;
   }
 
-  function armLoadTimeout() {
-    if (loadTimeoutId) window.clearTimeout(loadTimeoutId);
-    loadTimeoutId = window.setTimeout(() => {
-      if (!finished) tryNextSource();
-    }, LOAD_TIMEOUT_MS);
+  function sameSource(a, b) {
+    if (!a || !b) return false;
+    try {
+      return new URL(a).href === new URL(b).href;
+    } catch {
+      return a === b || a.endsWith(b) || b.endsWith(a);
+    }
+  }
+
+  function bindEndedOnce() {
+    if (!video || endedBound) return;
+    endedBound = true;
+    video.addEventListener("ended", finishIntro, { once: true });
+  }
+
+  function startPlaybackOnce() {
+    if (!video || finished || playbackStarted) return;
+    playbackStarted = true;
+    bindEndedOnce();
+
+    const p = video.play();
+    if (p && typeof p.catch === "function") {
+      p.catch(() => {});
+    }
+  }
+
+  function wireReadyPlayback() {
+    if (!video || finished) return;
+
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      startPlaybackOnce();
+      return;
+    }
+
+    video.addEventListener("canplay", () => startPlaybackOnce(), { once: true });
   }
 
   function tryNextSource() {
@@ -80,47 +113,39 @@ export function initVideoIntro(onReveal) {
 
     const path = VIDEO_PATHS[pathIndex++];
     const url = urlForPath(path);
+    const existing = video.currentSrc || video.src || "";
 
+    video.loop = false;
+    video.removeAttribute("loop");
     video.removeAttribute("hidden");
     video.style.visibility = "visible";
     video.style.opacity = "1";
 
-    const cleanup = () => {
-      video.removeEventListener("canplay", onCanPlay);
-      video.removeEventListener("error", onError);
-    };
+    if (sameSource(existing, url)) {
+      bindEndedOnce();
+      wireReadyPlayback();
+      return;
+    }
 
-    const onCanPlay = () => {
-      cleanup();
-      if (loadTimeoutId) {
-        window.clearTimeout(loadTimeoutId);
-        loadTimeoutId = 0;
-      }
-      if (!endedBound) {
-        endedBound = true;
-        video.addEventListener("ended", finishIntro, { once: true });
-      }
-      const p = video.play();
-      if (p && typeof p.catch === "function") {
-        p.catch(() => {
-          window.setTimeout(() => {
-            if (!finished) video.play().catch(() => {});
-          }, 120);
-        });
-      }
+    const onReady = () => {
+      video.removeEventListener("error", onError);
+      bindEndedOnce();
+      startPlaybackOnce();
     };
 
     const onError = () => {
-      cleanup();
+      video.removeEventListener("canplay", onReady);
+      video.removeEventListener("loadeddata", onReady);
+      playbackStarted = false;
       tryNextSource();
     };
 
-    video.addEventListener("canplay", onCanPlay);
-    video.addEventListener("error", onError);
+    video.addEventListener("canplay", onReady, { once: true });
+    video.addEventListener("loadeddata", onReady, { once: true });
+    video.addEventListener("error", onError, { once: true });
 
     video.src = url;
     video.load();
-    armLoadTimeout();
   }
 
   maxId = window.setTimeout(finishIntro, MAX_INTRO_MS);
@@ -137,11 +162,14 @@ export function initVideoIntro(onReveal) {
 
   video.muted = true;
   video.defaultMuted = true;
+  video.loop = false;
+  video.removeAttribute("loop");
   video.setAttribute("muted", "");
   video.playsInline = true;
   video.setAttribute("playsinline", "");
   video.preload = "auto";
   video.setAttribute("preload", "auto");
+  video.removeAttribute("autoplay");
 
   tryNextSource();
 }
