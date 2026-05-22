@@ -4,7 +4,6 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="./logo.png" />
-    <link rel="preload" href="./intro.mp4" as="video" type="video/mp4" />
     <script src="./barber-theme-boot.js"></script>
     <script>
       /* Safety: never leave a blank page if intro / modules stall */
@@ -43,7 +42,7 @@
     <link rel="stylesheet" href="./shop-theme.css?v=20260522-grid4" />
     <link rel="stylesheet" href="./shop-auth-checkout.css?v=20260519-3" />
     <link rel="stylesheet" href="./shop-pd-detail.css?v=20260521-7" />
-    <link rel="stylesheet" href="./intro-video.css?v=20260523-video2" />
+    <link rel="stylesheet" href="./intro-video.css?v=20260523-video4" />
     <style>
       /* Lets --split-vx / --split-hy interpolate so hairlines + ambient glow track the quad exactly with the panels. */
       @property --split-vx {
@@ -5703,7 +5702,7 @@
           src="intro.mp4"
           muted
           playsinline
-          preload="auto"
+          preload="metadata"
           disablepictureinpicture
         ></video>
       </div>
@@ -5726,7 +5725,7 @@
       <div id="cursorDot" class="custom-cursor__dot"></div>
     </div>
 
-    <script type="module" src="./shop-bootstrap.js?v=20260521-db"></script>
+    <script type="module" src="./shop-bootstrap.js?v=20260523-defer-store"></script>
     <script type="module" src="./intro-showroom.js?v=20260522-smooth-playback"></script>
     <script type="module" src="./intro-hero-ambient.js?v=20260522-js"></script>
     <script type="module" src="./intro-shop.js?v=20260522-blob-cards-fix"></script>
@@ -6128,7 +6127,7 @@
       })();
     </script>
     <script type="module">
-      import { initVideoIntro } from "./intro-video.js?v=20260523-video3";
+      import { initVideoIntro } from "./intro-video.js?v=20260523-video4";
       initVideoIntro(function () {
         if (typeof window.barberRevealHomepage === "function") {
           window.barberRevealHomepage();

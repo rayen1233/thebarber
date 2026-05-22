@@ -1,8 +1,9 @@
 /**
- * Fullscreen intro.mp4 — play once, no loop, fade to homepage when ended.
+ * Fullscreen intro.mp4 — play once, mobile-safe, fade to homepage.
  */
 
 const MAX_INTRO_MS = 120000;
+const MOBILE_PLAY_TIMEOUT_MS = 8000;
 
 /** @type {string[]} */
 const VIDEO_PATHS = ["intro.mp4", "public/intro.mp4", "/intro.mp4"];
@@ -22,6 +23,7 @@ export function initVideoIntro(onReveal) {
   let pathIndex = 0;
   let maxId = 0;
   let endedBound = false;
+  let durationTimerId = 0;
 
   const dissolve =
     parseInt(
@@ -31,7 +33,9 @@ export function initVideoIntro(onReveal) {
 
   function clearTimers() {
     if (maxId) window.clearTimeout(maxId);
+    if (durationTimerId) window.clearTimeout(durationTimerId);
     maxId = 0;
+    durationTimerId = 0;
   }
 
   function finishIntro() {
@@ -75,17 +79,48 @@ export function initVideoIntro(onReveal) {
   function bindEndedOnce() {
     if (!video || endedBound) return;
     endedBound = true;
-    video.addEventListener("ended", finishIntro, { once: true });
+    video.addEventListener(
+      "ended",
+      () => {
+        if (durationTimerId) window.clearTimeout(durationTimerId);
+        durationTimerId = 0;
+        finishIntro();
+      },
+      { once: true },
+    );
   }
 
-  function startPlaybackOnce() {
+  /** iOS: autoplay blocked — still respect clip length then show homepage. */
+  function scheduleDurationFallback() {
+    if (!video || durationTimerId) return;
+    const sec = video.duration;
+    const ms =
+      Number.isFinite(sec) && sec > 0
+        ? Math.ceil(sec * 1000) + 200
+        : MOBILE_PLAY_TIMEOUT_MS;
+    durationTimerId = window.setTimeout(finishIntro, ms);
+  }
+
+  async function startPlaybackOnce() {
     if (!video || finished || playbackStarted) return;
     playbackStarted = true;
     bindEndedOnce();
 
-    const p = video.play();
-    if (p && typeof p.catch === "function") {
-      p.catch(() => {});
+    video.muted = true;
+    video.defaultMuted = true;
+    video.setAttribute("muted", "");
+
+    try {
+      await video.play();
+    } catch {
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        try {
+          video.currentTime = 0;
+        } catch {
+          /* ignore */
+        }
+      }
+      scheduleDurationFallback();
     }
   }
 
@@ -93,11 +128,24 @@ export function initVideoIntro(onReveal) {
     if (!video || finished) return;
 
     if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      startPlaybackOnce();
+      void startPlaybackOnce();
       return;
     }
 
-    video.addEventListener("canplay", () => startPlaybackOnce(), { once: true });
+    video.addEventListener(
+      "loadeddata",
+      () => {
+        void startPlaybackOnce();
+      },
+      { once: true },
+    );
+    video.addEventListener(
+      "canplay",
+      () => {
+        void startPlaybackOnce();
+      },
+      { once: true },
+    );
   }
 
   function tryNextSource() {
@@ -130,7 +178,7 @@ export function initVideoIntro(onReveal) {
     const onReady = () => {
       video.removeEventListener("error", onError);
       bindEndedOnce();
-      startPlaybackOnce();
+      void startPlaybackOnce();
     };
 
     const onError = () => {
@@ -163,13 +211,12 @@ export function initVideoIntro(onReveal) {
   video.muted = true;
   video.defaultMuted = true;
   video.loop = false;
-  video.removeAttribute("loop");
-  video.setAttribute("muted", "");
   video.playsInline = true;
+  video.setAttribute("muted", "");
   video.setAttribute("playsinline", "");
-  video.preload = "auto";
-  video.setAttribute("preload", "auto");
-  video.removeAttribute("autoplay");
+  video.setAttribute("webkit-playsinline", "");
+  video.preload = "metadata";
+  video.setAttribute("preload", "metadata");
 
   tryNextSource();
 }
