@@ -1,15 +1,14 @@
 /**
  * Load remote store before shop / admin modules run on Vercel.
  */
-import {
-  hydrateRemoteStore,
-  isRemoteMode,
-  maybeMigrateLocalCatalogToServer,
-} from "./shop-remote.js";
+import { hydrateRemoteStore } from "./shop-remote.js";
 
 const boot = (async () => {
-  if (!isRemoteMode()) return;
-  await hydrateRemoteStore();
+  await hydrateRemoteStore({
+    serverWins: true,
+    allowIdbFallback: false,
+    publicCatalog: true,
+  });
 })();
 
 export function whenStoreReady() {

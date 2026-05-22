@@ -149,11 +149,16 @@ export function revokeAllProductVideoObjectUrls() {
  * @param {{ videoUrl?: string, videoPosterUrl?: string, photos?: string[] }} product
  */
 export function resolveProductVideoPoster(product) {
-  const explicit = String(product?.videoPosterUrl || "").trim();
+  let explicit = String(product?.videoPosterUrl || "").trim();
+  if (isCloudinaryProductVideoUrl(explicit)) explicit = "";
   if (explicit) return resolveShopMediaUrl(explicit) || explicit;
   const photos = Array.isArray(product?.photos) ? product.photos : [];
-  const first = String(photos[0] || "").trim();
-  return first ? resolveShopMediaUrl(first) || first : "";
+  for (const ph of photos) {
+    const first = String(ph || "").trim();
+    if (!first || isCloudinaryProductVideoUrl(first)) continue;
+    return resolveShopMediaUrl(first) || first;
+  }
+  return "";
 }
 
 /**
@@ -210,13 +215,21 @@ export async function persistProductVideoRef(productId, videoUrl) {
  * @returns {Promise<string>}
  */
 export async function resolveProductVideoUrl(product) {
-  const raw = String(product?.videoUrl || "").trim();
+  let raw = String(product?.videoUrl || "").trim();
   if (!raw) return "";
   if (isIdbVideoRef(raw)) {
     const id = idbVideoProductId(raw);
     return (await getProductVideoObjectUrl(id)) || "";
   }
-  return resolveShopMediaUrl(raw);
+  if (isCloudinaryProductVideoUrl(raw)) {
+    const { fetchPublicStoreVideoMap } = await import("./shop-remote.js");
+    const fromServer = (await fetchPublicStoreVideoMap()).get(String(product?.id || "").trim());
+    raw = String(fromServer || "").trim();
+    if (!raw || isCloudinaryProductVideoUrl(raw)) return "";
+  }
+  const resolved = resolveShopMediaUrl(raw);
+  if (isCloudinaryProductVideoUrl(resolved)) return "";
+  return resolved;
 }
 
 /** Déplace les data:video du catalogue vers IndexedDB. */

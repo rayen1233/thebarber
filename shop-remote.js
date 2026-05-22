@@ -222,8 +222,66 @@ export function readLocalStorePayload() {
  *   allowIdbFallback — use IDB only when the network request fails (not when server is empty).
  *   usersOrdersOnly — admin: sync users/orders only, leave product catalogue untouched.
  */
+/** Remplace les videoUrl Cloudinary restantes dans le cache local par les URLs Blob du serveur. */
+async function syncStaleCloudinaryProductVideos() {
+  const { isCloudinaryProductVideoUrl } = await import("./lib/product-video-url.mjs");
+  const map = await fetchPublicStoreVideoMap();
+  if (!map.size) return;
+  const local = readLocalStorePayload();
+  let changed = false;
+  const products = (Array.isArray(local.products) ? local.products : []).map((p) => {
+    if (!p || typeof p !== "object") return p;
+    const row = { .../** @type {Record<string, unknown>} */ (p) };
+    const id = String(row.id || "").trim();
+    const v = String(row.videoUrl || "").trim();
+    if (!id || !isCloudinaryProductVideoUrl(v)) return row;
+    const server = map.get(id);
+    if (!server) return row;
+    changed = true;
+    row.videoUrl = server;
+    if (isCloudinaryProductVideoUrl(String(row.videoPosterUrl || ""))) row.videoPosterUrl = "";
+    return row;
+  });
+  if (changed) persistProductsLocally(products);
+}
+
+/** @type {Promise<Map<string, string>> | null} */
+let publicStoreVideoMapPromise = null;
+
+/** Vide le cache des URLs vidéo serveur (après hydrate / migration). */
+export function clearPublicStoreVideoMapCache() {
+  publicStoreVideoMapPromise = null;
+}
+
+/** @returns {Promise<Map<string, string>>} productId → videoUrl (Blob /api/media uniquement) */
+export async function fetchPublicStoreVideoMap() {
+  if (publicStoreVideoMapPromise) return publicStoreVideoMapPromise;
+  publicStoreVideoMapPromise = (async () => {
+    const { isCloudinaryProductVideoUrl } = await import("./lib/product-video-url.mjs");
+    const map = new Map();
+    try {
+      const res = await fetch(storeApiUrl("/api/store"), { cache: "no-store" });
+      if (!res.ok) return map;
+      const data = await res.json();
+      const products = Array.isArray(data.products) ? data.products : [];
+      for (const p of products) {
+        if (!p || typeof p !== "object") continue;
+        const id = String(/** @type {{ id?: string }} */ (p).id || "").trim();
+        const v = String(/** @type {{ videoUrl?: string }} */ (p).videoUrl || "").trim();
+        if (!id || !v || isCloudinaryProductVideoUrl(v)) continue;
+        map.set(id, v);
+      }
+    } catch {
+      /* ignore */
+    }
+    return map;
+  })();
+  return publicStoreVideoMapPromise;
+}
+
 export async function hydrateRemoteStore(opts = {}) {
-  if (!isRemoteMode() && !usesRemoteCatalog()) return { ok: true, source: "local" };
+  const wantRemote = isRemoteMode() || usesRemoteCatalog() || Boolean(opts.publicCatalog);
+  if (!wantRemote) return { ok: true, source: "local" };
   const serverWins = opts.serverWins !== false;
   const allowIdbFallback = opts.allowIdbFallback !== false;
   const usersOrdersOnly = Boolean(opts.usersOrdersOnly);
@@ -238,6 +296,8 @@ export async function hydrateRemoteStore(opts = {}) {
       const remoteCount = Array.isArray(data.products) ? data.products.length : 0;
 
       applyStoreToLocal(data, { serverWins, forceEmpty: serverWins, usersOrdersOnly });
+      clearPublicStoreVideoMapCache();
+      await syncStaleCloudinaryProductVideos();
       return {
         ok: true,
         source: "remote",
