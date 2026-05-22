@@ -1,27 +1,28 @@
 /**
- * Fullscreen intro.mp4 — autoplay, skip, failsafe, fade to homepage.
+ * Fullscreen intro.mp4 — load aggressively, play when ready, fade to homepage.
  */
 
-const FAILSAFE_MS = 1000;
+const LOAD_TIMEOUT_MS = 20000;
 const MAX_INTRO_MS = 120000;
 
 /** @type {string[]} */
-const VIDEO_PATHS = ["intro.mp4", "public/intro.mp4", "/intro.mp4"];
+const VIDEO_PATHS = ["intro.mp4", "./intro.mp4", "public/intro.mp4", "/intro.mp4"];
 
 /**
- * @param {() => void} onReveal — homepage handoff (hero particles, etc.)
+ * @param {() => void} onReveal
  */
 export function initVideoIntro(onReveal) {
   const intro = document.getElementById("intro");
   const video = /** @type {HTMLVideoElement | null} */ (
     document.getElementById("introVideo")
   );
-  const skip = document.getElementById("introSkip");
   const base = document.baseURI || window.location.href;
 
   let finished = false;
-  let failsafeId = 0;
+  let loadTimeoutId = 0;
   let maxId = 0;
+  let pathIndex = 0;
+  let endedBound = false;
 
   const dissolve =
     parseInt(
@@ -30,9 +31,9 @@ export function initVideoIntro(onReveal) {
     ) || 900;
 
   function clearTimers() {
-    if (failsafeId) window.clearTimeout(failsafeId);
+    if (loadTimeoutId) window.clearTimeout(loadTimeoutId);
     if (maxId) window.clearTimeout(maxId);
-    failsafeId = 0;
+    loadTimeoutId = 0;
     maxId = 0;
   }
 
@@ -47,71 +48,80 @@ export function initVideoIntro(onReveal) {
 
     window.setTimeout(() => {
       intro?.remove();
-      const warn = document.getElementById("file-proto-warn");
-      warn?.remove();
+      document.getElementById("file-proto-warn")?.remove();
     }, dissolve + 80);
   }
 
-  function scheduleFailsafe() {
-    if (failsafeId) return;
-    failsafeId = window.setTimeout(finishIntro, FAILSAFE_MS);
+  /** @param {string} p */
+  function urlForPath(p) {
+    if (p.startsWith("/") && (location.protocol === "http:" || location.protocol === "https:")) {
+      return `${location.origin}${p}`;
+    }
+    return new URL(p, base).href;
   }
 
-  function resolveVideoUrl() {
-    for (const p of VIDEO_PATHS) {
-      try {
-        if (p.startsWith("/") && (location.protocol === "http:" || location.protocol === "https:")) {
-          return `${location.origin}${p}`;
-        }
-        return new URL(p, base).href;
-      } catch {
-        /* try next */
+  function armLoadTimeout() {
+    if (loadTimeoutId) window.clearTimeout(loadTimeoutId);
+    loadTimeoutId = window.setTimeout(() => {
+      if (!finished) tryNextSource();
+    }, LOAD_TIMEOUT_MS);
+  }
+
+  function tryNextSource() {
+    if (!video || finished) {
+      finishIntro();
+      return;
+    }
+
+    if (pathIndex >= VIDEO_PATHS.length) {
+      finishIntro();
+      return;
+    }
+
+    const path = VIDEO_PATHS[pathIndex++];
+    const url = urlForPath(path);
+
+    video.removeAttribute("hidden");
+    video.style.visibility = "visible";
+    video.style.opacity = "1";
+
+    const cleanup = () => {
+      video.removeEventListener("canplay", onCanPlay);
+      video.removeEventListener("error", onError);
+    };
+
+    const onCanPlay = () => {
+      cleanup();
+      if (loadTimeoutId) {
+        window.clearTimeout(loadTimeoutId);
+        loadTimeoutId = 0;
       }
-    }
-    return "";
-  }
-
-  function armPlayback() {
-    if (!video) {
-      scheduleFailsafe();
-      return;
-    }
-
-    const url = resolveVideoUrl();
-    if (!url) {
-      scheduleFailsafe();
-      return;
-    }
-
-    video.src = url;
-    video.load();
-
-    const onPlaying = () => {
-      if (failsafeId) {
-        window.clearTimeout(failsafeId);
-        failsafeId = 0;
+      if (!endedBound) {
+        endedBound = true;
+        video.addEventListener("ended", finishIntro, { once: true });
+      }
+      const p = video.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => {
+          window.setTimeout(() => {
+            if (!finished) video.play().catch(() => {});
+          }, 120);
+        });
       }
     };
 
-    video.addEventListener("playing", onPlaying, { once: true });
-    video.addEventListener("ended", finishIntro, { once: true });
-    video.addEventListener(
-      "error",
-      () => {
-        scheduleFailsafe();
-      },
-      { once: true },
-    );
+    const onError = () => {
+      cleanup();
+      tryNextSource();
+    };
 
-    const playAttempt = video.play();
-    if (playAttempt && typeof playAttempt.catch === "function") {
-      playAttempt.catch(() => scheduleFailsafe());
-    }
+    video.addEventListener("canplay", onCanPlay);
+    video.addEventListener("error", onError);
 
-    scheduleFailsafe();
+    video.src = url;
+    video.load();
+    armLoadTimeout();
   }
-
-  skip?.addEventListener("click", finishIntro);
 
   maxId = window.setTimeout(finishIntro, MAX_INTRO_MS);
 
@@ -125,11 +135,13 @@ export function initVideoIntro(onReveal) {
     return;
   }
 
-  if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
-    armPlayback();
-  } else {
-    video.addEventListener("loadedmetadata", armPlayback, { once: true });
-    video.addEventListener("error", () => scheduleFailsafe(), { once: true });
-    scheduleFailsafe();
-  }
+  video.muted = true;
+  video.defaultMuted = true;
+  video.setAttribute("muted", "");
+  video.playsInline = true;
+  video.setAttribute("playsinline", "");
+  video.preload = "auto";
+  video.setAttribute("preload", "auto");
+
+  tryNextSource();
 }

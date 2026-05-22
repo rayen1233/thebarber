@@ -4,6 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="./logo.png" />
+    <link rel="preload" href="./intro.mp4" as="video" type="video/mp4" />
     <script src="./barber-theme-boot.js"></script>
     <script>
       /* Safety: never leave a blank page if intro / modules stall */
@@ -42,7 +43,7 @@
     <link rel="stylesheet" href="./shop-theme.css?v=20260522-grid4" />
     <link rel="stylesheet" href="./shop-auth-checkout.css?v=20260519-3" />
     <link rel="stylesheet" href="./shop-pd-detail.css?v=20260521-7" />
-    <link rel="stylesheet" href="./intro-video.css?v=20260523-video" />
+    <link rel="stylesheet" href="./intro-video.css?v=20260523-video2" />
     <style>
       /* Lets --split-vx / --split-hy interpolate so hairlines + ambient glow track the quad exactly with the panels. */
       @property --split-vx {
@@ -5699,6 +5700,7 @@
         <video
           id="introVideo"
           class="intro__video"
+          src="intro.mp4"
           muted
           playsinline
           autoplay
@@ -5707,7 +5709,6 @@
         ></video>
       </div>
       <div class="intro__vig" aria-hidden="true"></div>
-      <button type="button" class="intro__skip" id="introSkip">PASSER</button>
     </div>
 
     <div id="custom-cursor" class="custom-cursor" aria-hidden="true" hidden>
@@ -6128,7 +6129,7 @@
       })();
     </script>
     <script type="module">
-      import { initVideoIntro } from "./intro-video.js?v=20260523-video";
+      import { initVideoIntro } from "./intro-video.js?v=20260523-video2";
       initVideoIntro(function () {
         if (typeof window.barberRevealHomepage === "function") {
           window.barberRevealHomepage();
